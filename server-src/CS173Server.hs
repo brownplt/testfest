@@ -94,7 +94,7 @@ setupLogging maybeLogEmail maybeLogFile priority = do
   saveGlobalLogger log
 
 checkHelp :: [Flag] -> IO ()
-checkHelp flags | null flags || head flags == Help = do
+checkHelp (Help:_) = do
   putStrLn (usageInfo  "tourney-server -s PATH:" options)
   exitFailure
 checkHelp _ = return ()
