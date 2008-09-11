@@ -1,0 +1,13 @@
+#!/bin/bash
+
+if [ `hostname` = "wanderlust.local" ]; then
+  echo "Building on wanderlust.local ..."
+  ./Setup.lhs configure --user --prefix=/Users/arjun/local && \
+  ./Setup.lhs build
+elif [ `hostname` = "peabody" ]; then
+  echo "Building on peabody ..."
+  ./Setup.lhs configure --user --prefix=/home/arjun/local && \
+  ./Setup.lhs build
+else
+  echo "ERROR: Don't know how to build on " `hostname`
+fi

@@ -1,0 +1,1150 @@
+<html>
+<!-- Copyright (c) 2007-2008 Arjun Guha.
+     All Rights Reserved.
+  -->
+   
+
+<head>
+<title>CSCI1730 Test-Fest</title>
+<link rel="stylesheet" href="style.css"/>
+<script type="text/javascript" src="fx/flapjax.js"></script>
+<script type="text/javascript" src="lib/prototype.js"></script>
+<script type="text/javascript" src="lib/tourney.js"></script>
+
+<script type="text/javascript">
+
+isAdmin = false; // If you set this to true, you will become admin and
+                 // will be able to really screw stuff up.  Please don't
+                 // set it to true.  Thanks -- the management.
+
+function clicks_e(elem) {
+  return extractEvent_e(elem,'click').constant_e(elem.id || elem);
+};
+
+
+function report(elem,val) {
+  if (val) {
+    elem.setStyle({display: 'block'});
+    elem.innerHTML = val;
+  }
+  else {
+    elem.setStyle({display: 'none'});
+  }
+};
+
+function isTrue(v) { return !!v; };
+
+
+function submitTest(asgn) { return function(_ /* event */) {
+  
+  var testText = 
+    TEXTAREA({ style: { width: '100%',height: '100%'} });
+  var submitButton = LINK('Submit Test');
+  var cancelButton = LINK('Cancel');
+  var content = DIV(DIV(submitButton,cancelButton),
+    DIV({ style: { margin: '10px', width: '400px' } },
+        "Paste your test suite into the text box below.  Remember not to " +
+        "include your solution, if it is in the same file."),
+    DIV({ style: { margin: '10px', height: '400px', width: '400px' } }, 
+        testText));
+
+  var submitE = clicks_e(submitButton);
+  var cancelE = clicks_e(cancelButton);
+
+
+  var responseE = server_e('/api/newtest', submitE.lift_e(function(val) { 
+   return { test: $F(testText), assignment: asgn.id } }));
+
+ var responseOKE = responseE.filter_e(
+   function(r) { return r.success; });
+  
+  doneE = merge_e(responseOKE,cancelE)
+          .constant_e(false);
+  
+  modal(DIV({className: 'dialog'},
+          DIV({className: 'title'},'New Test Suite'),
+          content),
+        doneE);
+  
+}};
+
+function submitProg(asgn) { return function(_ /* event */) {
+  var testText = TEXTAREA({ style: { width: '100%',height: '100%' } });
+  var submitButton = LINK('Send');
+  var cancelButton = LINK('Cancel');
+  var content = DIV(DIV(submitButton,cancelButton),
+    DIV({ style: { margin: '10px', width: '400px' } },
+        "Paste your solution into the text box below.  We will run it " +
+        "against all test suites in the system."),
+    DIV({ style: { margin: '10px', height: '400px', width: '400px' } }, 
+      testText));
+
+  var submitE = clicks_e(submitButton);
+  var cancelE = clicks_e(cancelButton);
+
+
+  var responseE = server_e('/api/newprog', submitE.lift_e(function(val) { 
+    return { prog: $F(testText), asgnid: asgn.id } } ));
+
+ var responseOKE = responseE.filter_e(
+   function(r) { return r.success; });
+  
+  doneE = merge_e(responseOKE,cancelE)
+          .constant_e(false);
+  
+  modal(DIV({className: 'dialog'},
+            DIV({className: 'title'},'Submit Program'),
+            content),
+        doneE);
+}};
+
+// Formats a test that you submitted.
+function formatTestInfo(ti) {
+  
+  var time = new Date(); time.setTime(ti.time * 1000);
+
+  var status = ti.status.stat;
+
+  if (status == 'Submitted') {
+    return DIV(time.formatRelative()," test suite is being processed");
+  }
+  else if (status == 'TACheckOK') {
+    return DIV(time.formatRelative(), " test suite accepted");
+  }
+  else if (status == 'MachineCheckOK') {
+    return DIV(time.formatRelative()," pending approval by TAs");
+  }
+  else if (status == 'MachineCheckError' || status == 'TACheckError') {
+    var moreInfo = LINK("More information");
+    var isHidden = true;
+    var infoPane = PRE({style: { display: 'none'}}, ti.status.message);
+    clicks_e(moreInfo).lift_e(function(_) {
+      infoPane.setStyle({ display: isHidden ? 'block' : 'none'});
+      div.setStyle({ border: isHidden ? '1px solid black' : ''});
+      isHidden = !isHidden;
+    });
+    var div = DIV(time.formatRelative()," test suite raised an error or "
+                 + " was not accepted by the TAs",
+      SPAN({className: 'small'},moreInfo),infoPane);
+    return div;
+  }
+  else if (status == 'Superseded') {
+    return DIV(time.formatRelative()," test suite superseded");
+  }
+  else if (status == 'Retracted') {
+    return DIV(time.formatRelative(), " unknown error");
+  }
+};
+
+function alternateBg(elts) {
+  var bit = true;
+  elts.each(function(elt) {
+    elt.setStyle({ backgroundColor: bit ? '#ccccff' : '#ffffff'});
+    bit = !bit;
+  });
+  return elts;
+}
+
+function formatSubmission(ti) {
+
+  var time = new Date(); time.setTime(ti.time * 1000);
+
+  if (ti.status === true) {
+    return DIV(time.formatRelative(),": all tests passed");
+  }
+  else if (typeof ti.status == 'string') {
+    var moreInfo = LINK("More information");
+    var isHidden = true;
+    var infoPane = PRE({style: { display: 'none'}}, ti.status);
+    clicks_e(moreInfo).lift_e(function(_) {
+      infoPane.setStyle({ display: isHidden ? 'block' : 'none'});
+      div.setStyle({ border: isHidden ? '1px solid black' : ''});
+      isHidden = !isHidden;
+    });
+    var div = DIV(time.formatRelative(),": some tests failed ",
+      SPAN({className: 'small'},moreInfo),infoPane);
+    return div;
+  }
+  else if (ti.status === false) {
+    return DIV(time.formatRelative(),": submission is being processed");
+  }
+  else {
+    return DIV("An error occured: " + ti.toString());
+  }
+};
+
+// Query for submitted programs when requestE fires.
+function querySubmissions(destElem,asgn,requestE) {
+  var responseE = server_e('/api/programs',
+    requestE.constant_e({ asgnid: asgn.id }));
+
+  var submissionsE = responseE.filter_e(isSuccess)
+    .lift_e(function(r) { return r.value; });
+
+  var divE = submissionsE.lift_e(function(submissions) {
+    var elts = [ ];
+    submissions.sort(function(x,y) { return y.time - x.time; });
+    submissions.each(function(si) { elts.push(formatSubmission(si)); });
+    if (elts.length == 0) {
+      return DIV("You haven't submitted any solutions.");
+    }
+    else {
+      return DIV.apply(this,alternateBg(elts));
+    }
+  });
+
+  insertDomE(divE,destElem);
+};
+
+// Info on test suites you've submittted.
+function queryTestSuites(destElem,asgn,requestE) {
+  var responseE =  
+    server_e('/api/testsuites',requestE.constant_e({ asgnid: asgn.id }));
+
+  var testSuitesE = responseE.filter_e(isSuccess)
+    .lift_e(function(r) { return r.value; });
+
+  var divE = testSuitesE.lift_e(function(testSuites) {
+    var elts = [ ];
+    testSuites.sort(function(x,y) { return y.time - x.time; });
+    testSuites.each(function(ti) { elts.push(formatTestInfo(ti)); });
+    if (elts.length == 0) { 
+      return DIV("You haven't submitted any test suites.");
+    }
+    else {
+      return DIV.apply(this,alternateBg(elts));
+    }
+  });
+  insertDomE(divE,destElem);
+};
+
+function formatTime(t) {
+  var time = new Date(); time.setTime(t * 1000);
+  return time.formatRelative();
+};
+
+function toggleExpander(elem,show) {
+  if (show) {
+    elem.setStyle({display: 'block'});
+  }
+  else {
+    elem.setStyle({display: 'none'});
+  }
+};
+
+
+function formatCurrentTest(test,isSingleSuiteAsgn) {
+  var text = DIV("By " + test[1].userid + ", submitted on " + 
+                 formatTime(test[1].time));
+
+  var codeDisp = P('Loading code, please wait ...');
+  var codeView = DIV({ className: 'codeBlock', style: { display: 'none'} },
+    codeDisp);
+
+
+  var rejectText = TEXTAREA({rows: '5', cols: '60'},
+    "If you can see this, your TA was too lazy to enter an explanation");
+  var rejectConfirmButton = INPUT({type: 'submit', value: 'Reject'});
+  var rejectPane = DIV({ style: { display: 'none'}},
+    DIV("Enter a short explanation that the student will see"),
+    rejectText,DIV(rejectConfirmButton));
+
+  var code = LINK('View code');
+  var accept = LINK('Accept');
+  var reject = LINK('Reject');
+  var buttons = DIV({className: 'diminuitive'}, code,codeView);
+
+  var codeVisible = false;
+  var loadCode = clicks_e(code);
+  loadCode.lift_e(function(_) {
+    codeVisible = !codeVisible;
+    toggleExpander(codeView,codeVisible);
+  });
+
+  clicks_e(accept).lift_e(function() {
+    buttons.setStyle({ display: 'none'});
+    toggleExpander(codeView,false);
+    toggleExpander(rejectPane,false);
+    
+    server_e('/api/setteststatus',
+      one_e({ id: test[0]
+            , status: Object.toJSON({ stat: 'TACheckOK' })
+            , userid: test[1].userid
+            , asgnid: test[1].asgnid
+            , singlesuite: isSingleSuiteAsgn 
+            }));
+    
+  });
+
+  clicks_e(reject).lift_e(function() { toggleExpander(rejectPane,true); });
+
+  var rejectE = clicks_e(rejectConfirmButton);
+
+  server_e('/setteststatus',rejectE.lift_e(function() {
+    buttons.setStyle({ display: 'none'});
+    toggleExpander(codeView,false);
+    toggleExpander(rejectPane,false);
+    
+    return {id: test[0], 
+            status: Object.toJSON({ stat: 'TACheckError', msg: $F(rejectText) })
+    };
+  }));
+
+  
+
+  var responseE = server_e('/api/code',
+    loadCode.once_e().constant_e({id: test[1].body}));
+  var codeE = responseE.filter_e(isSuccess).lift_e(
+    function(v) { return PRE(v.value); });
+
+  insertDomE(codeE,codeDisp);
+
+  var div = DIV(text,buttons);
+  return div;
+};
+
+function formatPendingTest(test,isSingleSuiteAsgn) {
+  var text = DIV("By " + test[1].userid + ", submitted one " + 
+                 formatTime(test[1].time));
+
+  var codeDisp = P('Loading code, please wait ...');
+  var codeView = DIV({ className: 'codeBlock', style: { display: 'none'} },
+    codeDisp);
+
+
+  var rejectText = TEXTAREA({rows: '5', cols: '60'},
+    "If you can see this, your TA was too lazy to enter an explanation");
+  var rejectConfirmButton = INPUT({type: 'submit', value: 'Reject'});
+  var rejectPane = DIV({ style: { display: 'none'}},
+    DIV("Enter a short explanation that the student will see"),
+    rejectText,DIV(rejectConfirmButton));
+
+  var code = LINK('View code');
+  var accept = LINK('Accept');
+  var reject = LINK('Reject');
+  var buttons = DIV({className: 'diminuitive'}, code,accept,reject,codeView,
+    rejectPane);
+
+  var codeVisible = false;
+  var loadCode = clicks_e(code);
+  loadCode.lift_e(function(_) {
+    codeVisible = !codeVisible;
+    toggleExpander(codeView,codeVisible);
+  });
+
+  clicks_e(accept).lift_e(function() {
+    buttons.setStyle({ display: 'none'});
+    toggleExpander(codeView,false);
+    toggleExpander(rejectPane,false);
+    
+    server_e('/api/setteststatus',
+      one_e({ id: test[0]
+            , status: Object.toJSON({ stat: 'TACheckOK' })
+            , userid: test[1].userid
+            , asgnid: test[1].asgnid
+            , singlesuite: isSingleSuiteAsgn 
+            }));
+    
+  });
+
+  clicks_e(reject).lift_e(function() { toggleExpander(rejectPane,true); });
+
+  var rejectE = clicks_e(rejectConfirmButton);
+
+  server_e('/setteststatus',rejectE.lift_e(function() {
+    buttons.setStyle({ display: 'none'});
+    toggleExpander(codeView,false);
+    toggleExpander(rejectPane,false);
+    
+    return {id: test[0], 
+            status: Object.toJSON({ stat: 'TACheckError', msg: $F(rejectText) })
+    };
+  }));
+
+  
+
+  var responseE = server_e('/api/code',
+    loadCode.once_e().constant_e({id: test[1].body}));
+  var codeE = responseE.filter_e(isSuccess).lift_e(
+    function(v) { return PRE(v.value); });
+
+  insertDomE(codeE,codeDisp);
+
+  var div = DIV(text,buttons);
+  return div;
+}
+
+function displayPendingTests(destElem,asgn,requestE) {
+
+  var responseE = server_e('/api/pendingapproval',
+    requestE.constant_e({ asgnid: asgn.id }));
+
+  var testsE = responseE.filter_e(isSuccess).lift_e(function(r) {
+    return r.value; });
+
+  var divE = testsE.lift_e(function(tests) {
+    var elts = [ ];
+    tests.each(function(v) { 
+      elts.push(formatPendingTest(v,asgn.singletestsuite)); });
+
+    if (elts.length == 0) { return DIV('Nothing pending approval.'); }
+    else { return DIV.apply(this,alternateBg(elts)); }
+  });
+
+  insertDomE(divE,destElem);
+}
+
+function pendingTests(asgn) {
+
+  var refresh = LINK('Refresh');
+  var pending = DIV();
+  var approvalPane = DIV({className: 'form'},refresh,pending);
+
+  displayPendingTests(pending,asgn,merge_e(clicks_e(refresh),one_e(true)));
+
+  return approvalPane;
+
+}
+
+function displayCurrentTests(destElem,asgn,requestE) {
+
+  var responseE = server_e('/api/currenttests',
+    requestE.constant_e({ id: asgn.id }));
+
+  var testsE = responseE.filter_e(isSuccess).lift_e(function(r) {
+    return r.value; });
+
+  var divE = testsE.lift_e(function(tests) {
+    var elts = [ ];
+    tests.each(function(v) { 
+      elts.push(formatCurrentTest(v,asgn.singletestsuite)); });
+
+    if (elts.length == 0) { return DIV('Nothing pending approval.'); }
+    else { return DIV.apply(this,alternateBg(elts)); }
+  });
+
+  insertDomE(divE,destElem);
+}
+
+function currentTests(asgn) { 
+  
+  var refresh = LINK('Refresh');
+  var tests = DIV();
+  var pane = DIV({className: 'form'},
+    P("These tests are the ones that are running against student submissions."),
+     refresh,tests);
+
+  displayCurrentTests(tests,asgn,merge_e(clicks_e(refresh),one_e(true)));
+
+  return function() {
+    return pane;
+  };
+};
+
+function asgnSetup(asgn) { return function() {
+  return DIV("Nothing yet");
+  
+}};
+
+
+
+function asgnSolution(asgn) { 
+  var gold = TEXTAREA({rows: '10', style: { width: '100%'} });
+  var submit = LINK('Update Solution');
+  var msg =  DIV({className: 'error'});
+
+  var result = DIV({className: 'form'},
+    P("You can use this page to update the gold solution for " +
+      asgn.id + ".  You should not need to do this.  If you do, you screwed " +
+      "up when you created the assignment.  Chances are that some students' " +
+      "test suites are now invalid, or that some valid submissions were " +
+      "incorrectly deemed invalid."),
+    gold,
+    P("Be warned that if you submit, the admin will receive a message from " +
+      "the system and publicly shame you."),
+    msg,
+    submit);
+
+  var resultE = server_e('/api/updategold',clicks_e(submit).lift_e(function() { 
+    return { gold: $F(gold), asgnid: asgn.id } }));
+
+  resultE.lift_e(function(result) {
+    if (result.success) { report(msg,result.value || "Test suite updated."); }
+    else { report(msg,result.value || "update failed: server-side error"); }
+  });
+
+  return function() {
+   report(msg,false);
+   result.value = "Retreiving solution, please wait for it to load ...";
+    server_e('/api/getgold', one_e({ id: asgn.id })).lift_e(function(r) {
+      if (r.success) { gold.value = r.value; }
+      else { gold.value = r.value || "server-side error retrieving solution"; }
+    });
+    return result;
+  };
+};
+
+function makeTestPanel(asgn) {
+  var resultDiv;
+
+  if (asgn.enabled) {
+    var existingTests = DIV();
+    var newTestButton = LINK('Submit a new test suite');
+    var refreshTestsButton = LINK('Refresh');
+    numTests = DIV();
+    resultDiv = DIV({className: 'form'},
+      DIV(newTestButton,refreshTestsButton),
+      existingTests);
+
+    var refreshTestSuitesE = merge_e(one_e(true),clicks_e(refreshTestsButton));
+    queryTestSuites(existingTests,asgn,refreshTestSuitesE);
+
+    clicks_e(newTestButton).lift_e(submitTest(asgn));
+  }
+  else {
+    resultDiv = DIV({className: 'form'},
+      P("This assignment is not enabled, you cannot submit a test suite."));
+  }
+
+  return function() {
+    return resultDiv;
+  };
+};
+
+function makeSubmissionPanel(asgn) {
+  var resultDiv;
+
+  if (asgn.enabled) { 
+    var existingSubmissions = DIV();
+    var newProgButton = LINK('Submit a program');
+    var refreshProgsButton = LINK('Refresh');
+    var numTests = DIV();
+  
+    var getSubmissionsE = merge_e(one_e(true),clicks_e(refreshProgsButton));
+    querySubmissions(existingSubmissions,asgn,getSubmissionsE);
+   
+
+
+    resultDiv = 
+      DIV({className: 'form'},
+        DIV(newProgButton,refreshProgsButton),
+        numTests,
+        existingSubmissions);
+
+    var numTestsE =  server_e('/api/numtests',
+        merge_e(one_e(true),clicks_e(refreshProgsButton))
+       .constant_e({ id: asgn.id }))
+    .lift_e(function(r) {
+      return typeof(r.value) == 'number' ? r.value : "server-error"; 
+    });
+
+    insertDomE(numTestsE.lift_e(function(v) {
+      if (v == 1) { return DIV("There is one test suite available."); }
+      else { return DIV("There are " + v + " test suites available."); } }),
+      numTests); 
+  
+  
+    clicks_e(newProgButton).lift_e(submitProg(asgn));
+  }
+  else {
+    resultDiv = DIV({className: 'form'},
+      P("This assignment is not enabled, you cannot submit \
+                   solutions."));
+  }
+ 
+  return function() {
+    return resultDiv;
+  };
+};
+
+function makeAsgnEnable(asgn) {
+  var check_e = receiver_e();
+
+  var responseE =  server_e('/api/isasgnenabled',
+    check_e.constant_e({id: asgn.id}));
+
+  var msg =  DIV({className: 'error'});
+  var isEnabled = INPUT({type: 'checkbox', checked: 'true'});
+  var doEnable = LINK("Save changes");
+
+  // Stupid forms/prototype return "on" and "off".  Casting directly to
+  // JSON here.
+  var toBool = function(v) { return (v == "on") ? "true" : "false"; };
+
+  server_e('/api/setasgnenabled',clicks_e(doEnable).lift_e(function() {
+    return { id: asgn.id, enable: toBool($F(isEnabled)) };
+  })).lift_e(function(r) {
+    if (r.success) { report(msg,"Assignment updated. Refresh the page to see \
+                                changes."); }
+    else { report(msg,r.value || "update failed: server-side error"); }
+  });
+
+  responseE.lift_e(function(val) { 
+    if (val.success) { isEnabled.checked = val.value; }
+    else { report(msg,val.value || "server-side error"); }
+  });
+
+  var result = DIV({className: 'form'},
+    P("Use this page to enable or disable an assignment.  When disabled, \
+      students may no longer submit tests and solutions, but you can still \
+      perform administrative tasks, such as approving pending tests."),
+    DIV(isEnabled,"Assignment enabled"),
+    msg,
+    doEnable);
+  
+  return function() { 
+    report(msg,false); 
+    check_e.sendEvent(true);
+    return result;
+  };
+};
+
+function makeAssignmentPanel(asgn) {
+  var panels = { 'Test Suites' : makeTestPanel(asgn)
+               , 'Solutions' : makeSubmissionPanel(asgn) };
+  
+
+  if (isAdmin) { 
+    panels['Pending Tests'] = pendingTests(asgn); 
+    panels['Current Tests'] = currentTests(asgn);
+    panels['Setup'] = asgnSetup(asgn);
+    panels['Solution'] = asgnSolution(asgn);
+    panels['Enable/Disable'] = makeAsgnEnable(asgn);
+  }
+  
+  var buttons = buttonBar(['Test Suites','Solutions'],
+    isAdmin ? ['Pending Tests', 'Current Tests', 'Setup','Solution', 
+               'Enable/Disable' ] 
+            : false,
+    'Test Suites');
+
+  var content = DIV();
+  var result = DIV({className: 'innerPane'},
+    DIV({className: 'title'},buttons.elem),
+    content);
+
+  insertDomB(panelB(buttons.clickE,panels,panels['Test Suites']()),content);
+
+
+  return result;
+};
+
+var SUBTEXT = function(t) { return DIV({className: 'subtext'},t); };
+
+function newPLAIAsgn() {
+  var shortName = INPUT({type: 'text'});
+  var longName = INPUT({type: 'text'});
+  var interface = TEXTAREA({ rows: '5', style: { width: '100%'} });
+  var gold = TEXTAREA({rows: '10', style: { width: '100%'} });
+  var msg =  DIV({className: 'error'});
+
+  var createAsgn = LINK('Create Assignment');
+
+  var asgnE = clicks_e(createAsgn).lift_e(function() {
+    var cmd = '%p/plai-test.ss -ar -i "' + $F(interface) + '" %s %t';
+    return {
+      gold: $F(gold),
+      'asgn':
+        Object.toJSON({ id: $F(shortName)
+        , desc: $F(longName)
+        , enabled: false
+        , endtime: 0 // we don't do this yet
+        , singletestsuite: true
+        , solncmd: cmd
+        , testcmd: cmd
+        , solnid: "0" // dummy
+        , solnlang: 'plai'
+        , testlang: '' // plai-test.ss doesn't want a language for test suites
+        })
+    };
+  });
+  
+  var responseE = server_e('/api/newasgn',asgnE);
+  responseE.lift_e(function(r) {
+    if (r.success) {
+      report(msg,'Assignment created.  Refresh the page to work with it.');
+    }
+    else {
+      report(msg, r.value || 'failed: server-side error');
+    }
+  });
+
+  return DIV({className: 'form'},
+    P("Use this page to create an assignment based on #lang plai."),
+    P("Short name: ",shortName,
+      SUBTEXT("This is the title displayed along the top of the window.")),
+    P("Long name: ",longName,
+      SUBTEXT("This isn't used yet, but you never know.")),
+    P("Gold solution: ",DIV(gold),
+      SUBTEXT("This solution must begin with #lang plai.  AND IT MUST BE \
+        CORRECT.  Furthermore, even if you've told students to assume that \
+        certain kinds of input will never be provided (e.g. invalid input to \
+        the parser), this solution must correctly handle such cases so that \
+        we can reject submitted tests that violate input assumptions.")),
+    P("Interface: ",DIV(interface),
+      SUBTEXT("A space-separated list of the names that a solution exposes \
+        to a test suite.  For example, a solution to AE (Arithmetic \
+        Interpreter) exposes the following names: parse calc AE AE? num \
+        num? num-n set-num-n! add add?  add-lhs add-rhs set-add-lhs! \
+        set-add-rhs! sub sub? sub-lhs sub-rhs  set-sub-lhs! set-sub-rhs")),
+    msg,
+    P(createAsgn));
+};
+
+function newGCAsgn() {
+  var shortName = INPUT({type: 'text'});
+  var longName = INPUT({type: 'text'});
+  var gold = TEXTAREA({rows: '10', style: { width: '100%'} });
+  var msg =  DIV({className: 'error'});
+
+  var createAsgn = LINK('Create Assignment');
+
+  var asgnE = clicks_e(createAsgn).lift_e(function() {
+    var cmd = '%p/gc-test.ss -ar "  + " %s %t';
+    return {
+      gold: $F(gold),
+      'asgn':
+        Object.toJSON({ id: $F(shortName)
+        , desc: $F(longName)
+        , enabled: false
+        , endtime: 0 // we don't do this yet
+        , singletestsuite: false
+        , solncmd: cmd
+        , testcmd: cmd
+        , solnid: "0" // dummy
+        , solnlang: 'plai/collector'
+        , testlang: 'plai/mutator'
+        })
+    };
+  });
+  
+  var responseE = server_e('/api/newasgn',asgnE);
+  responseE.lift_e(function(r) {
+    if (r.success) {
+      report(msg,'Assignment created.  Refresh the page to work with it.');
+    }
+    else {
+      report(msg, r.value || 'failed: server-side error');
+    }
+  });
+
+  return DIV({className: 'form'},
+    P("Use this page to create a GC assignment (plai/collector and \
+       plai/mutator."),
+    P("Short name: ",shortName,
+      SUBTEXT("This is the title displayed along the top of the window.")),
+    P("Long name: ",longName,
+      SUBTEXT("This isn't used yet, but you never know.")),
+    P("Gold solution: ",DIV(gold),
+      SUBTEXT("This solution must begin with #lang plai/collector.  AND IT \
+        MUST BE CORRECT.  Furthermore, even if you've told students to assume \
+        that certain kinds of input will never be provided (e.g. invalid input \
+        to the parser), this solution must correctly handle such cases so that \
+        we can reject submitted tests that violate input assumptions.")),
+    msg,
+    P(createAsgn));
+};
+
+function newCustomAsgn() {
+  var shortName = INPUT({type: 'text'});
+  var longName = INPUT({type: 'text'});
+  var singleSuite = INPUT({type: 'checkbox', checked: 'true'});
+  var solnCmd = TEXTAREA({ rows: '5', style: { width: '100%'} });
+  var testCmd = TEXTAREA({ rows: '5', style: { width: '100%'} });
+  var solnLang = INPUT({type: 'text'});
+  var testLang = INPUT({type: 'text'});
+  var gold = TEXTAREA({rows: '10', style: { width: '100%'} });
+  var msg =  DIV({className: 'error'});
+
+  var createAsgn = LINK('Create Assignment');
+
+  var asgnE = clicks_e(createAsgn).lift_e(function() {
+    return {
+      gold: $F(gold),
+      'asgn':
+        Object.toJSON({ id: $F(shortName)
+        , desc: $F(longName)
+        , enabled: false
+        , endtime: 0 // we don't do this yet
+        , singletestsuite: $F(singleSuite)
+        , solncmd: $F(solnCmd)
+        , testcmd: $F(testCmd)
+        , solnid: "0" // dummy
+        , solnlang: $F(solnLang)
+        , testlang: $F(testLang)
+        })
+    };
+  });
+
+  
+  var responseE = server_e('/api/newasgn',asgnE);
+  responseE.lift_e(function(r) {
+    if (r.success) {
+      report(msg,'Assignment created.  Refresh the page to work with it.');
+    }
+    else {
+      report(msg, r.value || 'failed: server-side error');
+    }
+  });
+
+
+  return DIV({className: 'form'},
+    P("Use this page to create a custom assignment.  If your assignment is " +
+      " based on the PLAI software, use the PLAI and GC pages instead."),
+    P("Short name: ",shortName,
+      SUBTEXT("This is the title displayed on the top-most bar.")),
+    P("Full name: ",longName,
+        SUBTEXT("Okay, this isn't really used, but may be in the future.")),
+    P("Gold implementation: ",DIV(gold),
+        SUBTEXT("Include the #lang line in your implementaion.  THIS MUST " +
+          " BE CORRECT!")),
+    P(singleSuite,"Single test suite?",
+      SUBTEXT("If checked, only the latest approved test suite from each " +
+        " group will be used for war-grading.")),
+    P("Solution command:",DIV(solnCmd),
+      SUBTEXT("Shell command to test a submitted solution against a single \
+      test suite.  Use '%s' for the file name of the solution, '%t' for \
+      the file name of the test suite, '%p' for the path to the plai \
+      collection, and '%%' if you really need to enter '%'.  Your shell \
+      command should exit with zero if all tests pass.  If any test fails, \
+      exit with a non-zero error code.  Everything sent to stderr is \
+      reported to the student, only if you exit with a non-zero error code. \
+      On failure, write the number of failed tests to stdout.  You may \
+      write 0.  This is purely for statistics potentially for grading.")),
+    P("Test suite command:",DIV(testCmd),
+      SUBTEXT("Shell command to run a submitted test suite against the gold \
+      solution.  This is probably the same as your solution command \
+      above.  The instructions are the same.")),
+    P("Solution language:",solnLang,
+      SUBTEXT("Example: 'plai' or 'plai/mutator' (without the quotes).  If a \
+      submitted solution omits a #lang or a #reader line, the system will \
+      insert a #lang line with this language.  Leave this field blank if \
+      you don't want anything inserted.")),
+    P("Test suite language:",testLang,
+      SUBTEXT("Same as above, but for test suites.")),
+    msg,
+    P(LINK("Click here to view 23 more optional fields")),
+    P(createAsgn));
+};
+
+function newAsgn() {
+
+  var buttons = buttonBar(['PLAI','GC','Custom'],[],'PLAI');
+  var content = DIV();
+
+  var panes = 
+    { 'PLAI': newPLAIAsgn
+    , 'GC': newGCAsgn
+    , 'Custom': newCustomAsgn
+    };
+
+  var result = DIV({className: 'innerPane'},
+    DIV({className: 'title'},buttons.elem),
+    content);
+
+  insertDomB(panelB(buttons.clickE,panes,newPLAIAsgn()),content);
+  
+  return result;
+}
+
+
+// There is just one settings pane, but we guard it in a lambda so that
+// Flapjax can initialize first.
+function makeSettingsPane() {
+
+  var msg =  DIV({className: 'error'});
+  var existingPass = INPUT({type: 'password'});
+  var newPass = INPUT({type: 'password'});
+  var repeatPass = INPUT({type: 'password'});
+  var setPass = LINK('Change Password');
+
+  var maybeChangeE = clicks_e(setPass).lift_e(function() {
+    if ($F(newPass) != $F(repeatPass)) {
+      report(msg,'The passwords you entered do not match');
+      return false;
+    }
+    else {
+      report(msg,'Please wait ...');
+      return { newpass: $F(newPass), oldpass: $F(existingPass) }
+    }
+  });
+
+  var responseE = server_e('/api/changepass',maybeChangeE.filter_e(isTrue));
+
+  responseE.lift_e(function(r) {
+    if (r.success) {
+      report(msg,'Password changed.');
+    }
+    else {
+      report(msg,r.value || 'Server error');
+    }
+  });
+
+  return DIV({className: 'innerPane'},
+    DIV({className: 'title'},'Change Password'),
+    DIV({className: 'form'},
+      msg,
+      TABLE(TR(TD('Current Password: '),TD(existingPass)),
+            TR(TD('New Password: '),TD(newPass)),
+            TR(TD('Repeat New Password: '),TD(repeatPass))),
+      setPass));
+};  
+  
+
+function assignmentPane(nextE) {
+  var pane = DIV();
+  var asgnE = server_e(isAdmin ? '/api/allasgns' : '/api/assignments',
+                       one_e({ }));
+
+
+
+  asgnE.lift_e(function(result) {
+    if (result.success) {
+      var asgns = { };
+
+      result.value.each(function(asgn) {
+        asgns[asgn.id] = makeAssignmentPanel(asgn);
+      });
+
+      asgns['Settings'] = makeSettingsPane();
+     
+      var rhsButtons = ['Settings','Logout'];
+
+      if (isAdmin) { 
+        rhsButtons.unshift('Create New Assignment');
+        asgns['Create New Assignment'] = newAsgn();
+      }
+
+      var buttons = buttonBar(
+        map(function(asgn) { return asgn.id; },result.value),rhsButtons,
+        result.value[0]);
+
+      var content = DIV();
+      var opsE = buttons.clickE.lift_e(function(val) {
+        if (val == 'Logout') {
+          server_e('/api/logout',one_e({ }));
+          
+          // We don't really care what the server says.
+          modal(DIV({className: 'shutdown'}, 
+                    "It's now safe to turn off your computer",
+                     DIV(A({ style: { fontSize: '12px',color: '#ffffff' },
+                             href: 'javascript:window.location.reload()'}, 
+                       "Log In Again"))),
+            one_e(true));
+          
+          return false;
+        }
+        else { return asgns[val]; }
+      });
+    
+      insertDomE(opsE.filter_e(function(v) { return !!v; }), content);
+
+      pane.appendChild(DIV({ className: 'asgn'},
+                         DIV({className: 'title'},buttons.elem),content));
+    }
+  });
+
+  return pane;
+};
+
+function forgotPane() {
+
+  var username = INPUT({type: 'text'});
+  var remind = LINK('Send a reminder');
+  var back = LINK('Back');
+  var msg = DIV({className: 'error'},"");
+
+  var pane = DIV({className: 'dialog'},
+    DIV({className: 'title'},'Password Reminder'),
+     
+      DIV({style: {margin: '10px'} },
+          DIV('Enter your username below and we\'ll send you ' +
+              'a password reminder.'),
+          DIV(username),
+          msg,
+          DIV(remind,back)));
+
+  var reminderSent = true;
+
+  server_e('/api/forgotpassword',
+    clicks_e(remind)
+    .filter_e(function() { return !reminderSent; }) // interesting use case
+    .lift_e(function() { return { id: $F(username) }; }))
+  .lift_e(function() {
+    reminderSent = true;
+    report(msg,"We've sent a reminder to " + $F(username) 
+      + ".  Check your email.");
+  });
+
+  var showE = receiver_e();
+
+  return function(_) {
+    reminderSent = false;
+    report(msg,false);
+    modal(pane,clicks_e(back).constant_e(false));
+  };
+};
+
+function loginPane(nextE) {
+  var loginMessage = DIV({className: 'error'},'');
+  var usernameField = INPUT({type: 'text', name: 'username'});
+  var passwordField = INPUT({type: 'password', name: 'password'});
+  var loginButton = INPUT({type: 'submit', value: 'Login'});
+  var registerButton = LINK('Register');
+  var forgotButton = LINK('Forgot Password');
+  
+  var pane = 
+    DIV({className: 'center'}, 
+    DIV({className: 'pane'},
+    DIV({className: 'title'}, 'Login'),
+    DIV({style: { padding: '10px' }},
+      FORM({action: 'javascript:undefined'},
+        loginMessage,
+        TABLE({style: { marginLeft: 'auto', marginRight: 'auto' } },
+              TR(TD('Username: '), TD(usernameField)),
+              TR(TD('Password: '), TD(passwordField))),
+        P(loginButton),
+        DIV({className: 'diminutive'},
+          /* registerButton, */ forgotButton)))));
+
+  one_e(false).lift_e(function() { usernameField.focus(); });
+
+  clicks_e(forgotButton).lift_e(forgotPane());
+  
+  var doLogin = function(_) {
+    registerButton.setStyle({ display: 'none' });
+    forgotButton.setStyle({ display: 'none' });
+    return server_e('/api/login',
+      one_e({ username: $F(usernameField), password: $F(passwordField) }))
+    .lift_e(function(loginResult) {
+      registerButton.setStyle({ display: 'block' });
+      forgotButton.setStyle({ display: 'block' });
+      if (loginResult.success) {
+        sessionId = loginResult.value;
+        return true;
+      }
+      else {
+        report(loginMessage, 
+               loginResult.value || "cannot login; server error");
+        return false;
+      }
+    });
+  };
+  
+  merge_e(clicks_e(registerButton).constant_e(registerPane),
+          clicks_e(loginButton)
+          .lift_e(doLogin).switch_e()
+          .filtereq_e(true).constant_e(assignmentPane))
+  .lift_e(function(v) {
+    server_e('/api/isadmin',one_e({})).lift_e(function (isAdmin_) {
+      isAdmin = isAdmin_;
+      nextE.sendEvent(v); 
+    });
+  });
+
+  return pane;
+};
+
+function registerPane(nextE) {
+  var message = DIV({className: 'error'},'');
+  var emailField = INPUT({type: 'text'});
+  var passwordField = INPUT({type: 'password'});
+  var passwordField2 = INPUT({type: 'password'});
+  var registerButton = INPUT({type: 'button', value: 'Register'});
+  var loginButton = LINK('Login');
+  
+  var pane = DIV({className: 'pane'},
+    DIV({className: 'title'},'Register'),
+    P('You may register with your @cs.brown.edu email address.'),
+    message,
+    FORM({action: 'javascript:undefined'},
+      P('Email address:',emailField),
+      P('Password:',passwordField),
+      P('Re-enter Password:',passwordField2),
+      P(registerButton)),
+    DIV({className: 'diminuitive'},
+      P('Return to the ',loginButton, ' screen')));
+
+  var doRegister = function(_) {
+    if ($F(passwordField) !== $F(passwordField2)) {
+      report(message,'The passwords you entered do not match.');
+      return false;
+    }
+    loginButton.setStyle({display: 'none'});
+    report(message, 'Sending registration ...');
+    return server_e('/api/newuser',one_e(
+      { username: $F(emailField),
+        password: $F(passwordField) }))
+    .lift_e(function(registerResult) {
+      loginButton.setStyle({display: 'block'});
+      if (registerResult.success) {
+        report(message, 'Registration complete');
+      }
+      else {
+        report(message, 
+          egisterResult.value || 'registration failure: server error');
+      }
+      return false;
+    });
+  };
+  
+  merge_e(clicks_e(loginButton).constant_e(loginPane),
+          clicks_e(registerButton).lift_e(doRegister).filtereq_e(true))
+  .lift_e(function(v) { nextE.sendEvent(v); });
+
+  return pane;
+};
+
+function start() {
+  flapjaxInit({hide: ['$$','$','$A']});
+  
+  // TODO: Make EventStream a global so we don't have to define this in here
+  EventStream.prototype.filtereq_e = function (val) {
+    return this.filter_e(function(v) { return v == val });
+  };
+
+  var pane_e = receiver_e();
+  var currentPane;
+  pane_e.lift_e(function(pane) {
+    if (currentPane) {
+     $('content').removeChild(currentPane);
+    }
+    currentPane = pane(pane_e);
+    $('content').appendChild(currentPane);
+  });
+
+  if (isLoggedIn()) {
+    server_e('/api/isadmin',one_e({})).lift_e(function (isAdmin_) {
+      isAdmin = isAdmin_;
+      pane_e.sendEvent(assignmentPane);
+    });
+  }
+  else {
+    pane_e.sendEvent(loginPane);
+  }
+};
+
+</script>
+
+</head>
+
+<body onload="start()">
+
+<div id="content">
+</div>
+
+<div class="pane" id="forgotPane" style="display: none">
+
+<div class="title">Forgot Password</div>
+
+<p>Enter your email address and we will email you a new password.</p>
+
+<form action="javascript:undefined">
+<p>Email address: <input type="text" id="forgotEmail"/></p>
+<p><input type="submit" value="Reset Password"/></p>
+</form>
+
+</div> <!-- forgotPane -->
+
+</body>
+
