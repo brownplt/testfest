@@ -1,5 +1,6 @@
 module CS173.Tourney where
 
+import Data.IORef
 import Data.Maybe (fromJust)
 import qualified Data.Maybe as Y
 import System.Log.Logger
@@ -46,8 +47,9 @@ runCommandTimed :: String
                 -> IO (Maybe (Int,String,String))
 runCommandTimed commandString timeLimit = do
   infoM "tourney" ("Running command: " ++ commandString)
-  (stdin,stdout,stderr,process) <- runInteractiveCommand commandString
-  let getResult = do
+  mv <- newEmptyMVar
+  let doRun = do
+        (stdin,stdout,stderr,process) <- runInteractiveCommand commandString
         code <- waitForProcess process
         hSetBinaryMode stdout False
         hSetBinaryMode stderr False
@@ -56,17 +58,12 @@ runCommandTimed commandString timeLimit = do
         hClose stdin
         length errs `seq` hClose stderr -- hGetContents leaks memory
         length outs `seq` hClose stdout
-        return (outs,errs)
-  result <- timeout (timeLimit * 1000000) getResult
-  case result of
-    Nothing -> do terminateProcess process
-                  return Nothing
-    Just (out,err) -> do
-      code <- getProcessExitCode process
-      case code of
-        Just ExitSuccess -> return $ Just (0,out,err) -- UNIX!!!
-        Just (ExitFailure n) -> return $ Just (n,out,err)
-        Nothing -> fail $ "cannot get exit code"
+        putMVar mv (code,outs,errs)
+  forkOS doRun
+  (code,out,err) <- takeMVar mv
+  case code of
+    ExitSuccess -> return $ Just (0,out,err) -- UNIX!!!
+    ExitFailure n -> return $ Just (n,out,err)
 
 collectErrors :: [TestStatus]
               -> String
@@ -154,27 +151,47 @@ checkTestSuite testId = do
           runCommandTimed cmd 60 -- at most 60 seconds of real time
     case r of
       Nothing ->  do
+        liftIO $ infoM "tourney.tester" (testId ++ " took too long.")
         updateTestSuiteStatus (const $ TestSuiteMachineCheckError 
                                        "Your test suite took too long.")
                               testId
       Just (0,outs,errs) -> do
+        liftIO $ infoM "tourney.tester" (testId ++ " passed gold.")
         updateTestSuiteStatus (const TestSuiteMachineCheckOK) testId
-      Just (_,outs,errs) ->  do
+      Just (code,outs,errs) ->  do
+        liftIO $ infoM "tourney.tester" $ testId ++ 
+          " raised errors (exit code: " ++ show code ++ ")"
         updateTestSuiteStatus (const $ TestSuiteMachineCheckError errs) testId
     return ()
 
-testSuiteTesterThread :: ServerM ()
-testSuiteTesterThread = do
+testSuiteTesterThread config = do
   liftIO $ debugM "tourney.tester" "Checking for new jobs..."
   lst <- liftIO $ runCouchDB' $ queryViewKeys dbSuites (doc "suites") 
                                               (doc "pending") []
   
-  mapM_ checkTestSuite lst
+  thisDoc <- liftIO $ newIORef Nothing
+  waitVar <- liftIO $ newEmptyMVar
+  let checkTestSuites = do
+        mapM_ (\testId -> do writeIORef thisDoc (Just testId)
+                             runConfig config $ checkTestSuite testId) lst
+        writeIORef thisDoc Nothing
+        
+  liftIO $ do 
+    forkOS (checkTestSuites `finally` putMVar waitVar ())
+    takeMVar waitVar
+    failed <- readIORef thisDoc
+    case failed of
+      Nothing -> return ()
+      Just testId -> do
+        errorM "tourney.tester" $ "GHC assplosion on " ++ testId
+        runCouchDB' $ updateTestSuiteStatus 
+          (const $ TestSuiteMachineCheckError "out of time/memory") testId
+        errorM "tourney.tester" $ "Successfully killed " ++ testId
   lst <- liftIO $ runCouchDB' $ queryViewKeys dbPrograms 
                                   (doc "programs") (doc "pending") []
   mapM_ checkProgram lst
   liftIO $ threadDelay (20 * 1000000)
-  testSuiteTesterThread
+  testSuiteTesterThread config
 
 getTestBody (_,subId) = do
   (Just testBody) <- getSubmission subId

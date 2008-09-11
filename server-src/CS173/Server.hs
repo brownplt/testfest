@@ -301,15 +301,15 @@ forgotPassword = withData $ \(ForId userId) -> singleton $ method POST $ do
 
 maintainThread n threadM = do
   mvar <- newEmptyMVar
-  forkIO (threadM `finally` putMVar mvar ())
-  forkIO $ do takeMVar mvar
+  forkOS (threadM `finally` putMVar mvar ())
+  forkOS $ do takeMVar mvar
               criticalM "tourney.tester" "Tester thread died!"
               threadDelay (60 * 1000000)
               maintainThread (n+1) threadM
   return ()
 
 server p config = do
-  maintainThread 0 (runConfig config testSuiteTesterThread)
+  maintainThread 0 (runConfig config (testSuiteTesterThread config))
   simpleHTTP nullConf { port=p } $ runServerParts config
     [ dir "api" [ dir "ping" [ anyRequest $ ok (toResponse "pong") ]
                 , dir "login" [ loginService]
