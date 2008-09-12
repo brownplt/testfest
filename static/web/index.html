@@ -271,7 +271,7 @@ function formatCurrentTest(test,isSingleSuiteAsgn) {
             , status: Object.toJSON({ stat: 'TACheckOK' })
             , userid: test[1].userid
             , asgnid: test[1].asgnid
-            , singlesuite: isSingleSuiteAsgn 
+            , singlesuite: Object.toJSON(isSingleSuiteAsgn) 
             }));
     
   });
@@ -280,14 +280,22 @@ function formatCurrentTest(test,isSingleSuiteAsgn) {
 
   var rejectE = clicks_e(rejectConfirmButton);
 
-  server_e('/setteststatus',rejectE.lift_e(function() {
+  server_e('/api/setteststatus',rejectE.lift_e(function() {
     buttons.setStyle({ display: 'none'});
     toggleExpander(codeView,false);
     toggleExpander(rejectPane,false);
+ 
+    var status =
+      Object.toJSON({ stat: 'TACheckError'
+                    , message: $F(rejectText) 
+                    });
     
-    return {id: test[0], 
-            status: Object.toJSON({ stat: 'TACheckError', msg: $F(rejectText) })
-    };
+    return { id: test[0],
+             status: status,
+             userid: test[1].userid,
+             asgnid: test[1].asgnid,
+             singlesuite: Object.toJSON(isSingleSuiteAsgn) 
+          };
   }));
 
   
@@ -342,7 +350,7 @@ function formatPendingTest(test,isSingleSuiteAsgn) {
             , status: Object.toJSON({ stat: 'TACheckOK' })
             , userid: test[1].userid
             , asgnid: test[1].asgnid
-            , singlesuite: isSingleSuiteAsgn 
+            , singlesuite: Object.toJSON(isSingleSuiteAsgn)
             }));
     
   });
@@ -351,13 +359,16 @@ function formatPendingTest(test,isSingleSuiteAsgn) {
 
   var rejectE = clicks_e(rejectConfirmButton);
 
-  server_e('/setteststatus',rejectE.lift_e(function() {
+  server_e('/api/setteststatus',rejectE.lift_e(function() {
     buttons.setStyle({ display: 'none'});
     toggleExpander(codeView,false);
     toggleExpander(rejectPane,false);
     
     return {id: test[0], 
-            status: Object.toJSON({ stat: 'TACheckError', msg: $F(rejectText) })
+            status: Object.toJSON({ stat: 'TACheckError', message: $F(rejectText) })
+            , userid: test[1].userid
+            , asgnid: test[1].asgnid
+            , singlesuite: Object.toJSON(isSingleSuiteAsgn) 
     };
   }));
 
