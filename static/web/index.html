@@ -294,7 +294,7 @@ function formatCurrentTest(test,isSingleSuiteAsgn) {
              status: status,
              userid: test[1].userid,
              asgnid: test[1].asgnid,
-             singlesuite: Object.toJSON(isSingleSuiteAsgn) 
+             singlesuite: Object.toJSON(false) // don't disable earlier tests
           };
   }));
 
@@ -368,7 +368,7 @@ function formatPendingTest(test,isSingleSuiteAsgn) {
             status: Object.toJSON({ stat: 'TACheckError', message: $F(rejectText) })
             , userid: test[1].userid
             , asgnid: test[1].asgnid
-            , singlesuite: Object.toJSON(isSingleSuiteAsgn) 
+            , singlesuite: Object.toJSON(false) // dont disable earlier tests
     };
   }));
 
