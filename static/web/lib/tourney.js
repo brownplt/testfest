@@ -23,7 +23,7 @@ Date.prototype.formatRelative = function() {
 
   if (this.getDay() == now.getDay() && this.getMonth() == now.getMonth() &&
       this.getFullYear() == now.getFullYear()) {
-    return (this.getHours() + (this.getMinutes() < 9 ? ":0" : ":") +
+    return (this.getHours() + (this.getMinutes() <= 9 ? ":0" : ":") +
             this.getMinutes());
   }
   else if (this.getFullYear() == now.getFullYear()) {
