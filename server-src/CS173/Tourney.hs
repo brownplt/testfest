@@ -11,7 +11,6 @@ import System.Timeout
 import System.IO
 import Control.Concurrent
 import Database.CouchDB
-import Database.CouchDB.Safety
 import System.Exit
 import Control.Monad.Trans
 import Control.Exception (finally)
@@ -79,8 +78,8 @@ withTempFile dir template action = do
 runTest :: String -- ^test command
         -> String -- ^ test suite
         -> String -- ^ program
-        -> String -- ^test id
-        -> String -- ^soln id
+        -> Doc -- ^test id
+        -> Doc -- ^soln id
         -> ServerM TestStatus
 runTest testCommand testText progText testId progId = do
   plaiTest <- plaiTestPath
@@ -120,10 +119,10 @@ runTest testCommand testText progText testId progId = do
         newDoc dbRep (mkRep errs (numTests errs))
         return (TestError errs)
     
-checkTestSuite :: String -> ServerM ()
+checkTestSuite :: Doc -> ServerM ()
 checkTestSuite testId = do
   plaiTest <- plaiTestPath
-  liftIO $ infoM "tourney.tester" ("running on test suite " ++ testId)
+  liftIO $ infoM "tourney.tester" ("running on test suite " ++ show testId)
   liftIO $ runCouchDB' $ do
     now <- getTime
     testSuite <- getTestSuite testId
@@ -151,15 +150,15 @@ checkTestSuite testId = do
           runCommandTimed cmd 60 -- at most 60 seconds of real time
     case r of
       Nothing ->  do
-        liftIO $ infoM "tourney.tester" (testId ++ " took too long.")
+        liftIO $ infoM "tourney.tester" (show testId ++ " took too long.")
         updateTestSuiteStatus (const $ TestSuiteMachineCheckError 
                                        "Your test suite took too long.")
                               testId
       Just (0,outs,errs) -> do
-        liftIO $ infoM "tourney.tester" (testId ++ " passed gold.")
+        liftIO $ infoM "tourney.tester" (show testId ++ " passed gold.")
         updateTestSuiteStatus (const TestSuiteMachineCheckOK) testId
       Just (code,outs,errs) ->  do
-        liftIO $ infoM "tourney.tester" $ testId ++ 
+        liftIO $ infoM "tourney.tester" $ show testId ++ 
           " raised errors (exit code: " ++ show code ++ ")"
         updateTestSuiteStatus (const $ TestSuiteMachineCheckError errs) testId
     return ()
@@ -183,10 +182,10 @@ testSuiteTesterThread config = do
     case failed of
       Nothing -> return ()
       Just testId -> do
-        errorM "tourney.tester" $ "GHC assplosion on " ++ testId
+        errorM "tourney.tester" $ "GHC assplosion on " ++ show testId
         runCouchDB' $ updateTestSuiteStatus 
           (const $ TestSuiteMachineCheckError "out of time/memory") testId
-        errorM "tourney.tester" $ "Successfully killed " ++ testId
+        errorM "tourney.tester" $ "Successfully killed " ++ (show testId)
   lst <- liftIO $ runCouchDB' $ queryViewKeys dbPrograms 
                                   (doc "programs") (doc "pending") []
   mapM_ checkProgram lst
@@ -198,9 +197,9 @@ getTestBody (_,subId) = do
   return testBody
 
 
-checkProgram :: String -> ServerM ()
+checkProgram :: Doc -> ServerM ()
 checkProgram progId = do
-  liftIO $ infoM "tourney.tester" ("running on solution " ++ progId)
+  liftIO $ infoM "tourney.tester" ("running on solution " ++ show progId)
   (prog,progBody,tests,testBodies,testCmd) <- liftIO $ runCouchDB' $ do
     prog <- getProgram progId
     asgn <- getAssignment (programAssignmentId prog)

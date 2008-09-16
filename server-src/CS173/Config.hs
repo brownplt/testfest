@@ -2,8 +2,7 @@ module CS173.Config
   ( Config (..)
   , staticRoot
   , plaiTestPath
-  , runServer
-  , runServerParts
+  , run173Server
   , runConfig
   , ServerM
   ) where
@@ -12,8 +11,8 @@ import Control.Monad.State
 import Data.Char (ord,chr)
 import Codec.Utils (Octet)
 import Control.Monad.Trans
-import Sessions
-import Network.WebServer
+import Network.WebServer hiding (runServer)
+import Network.WebServer.Sessions
 
 data Config = Config
   { configStaticRoot :: String
@@ -32,6 +31,10 @@ instance SessionInfo (StateT Config IO) where
   Config{configSessionSecret=r} <- get
   return r
 
+instance SessionInfo m => SessionInfo (ServerT m) where
+  getSessionLength = lift getSessionLength
+  getSessionSecret = lift getSessionSecret
+
 
 type ServerM = StateT Config IO
 
@@ -49,9 +52,7 @@ plaiTestPath = do
 runConfig :: Config -> ServerM a -> IO a
 runConfig config m = evalStateT m config
 
-runServer :: Config -> ServerPartT ServerM a -> ServerPartT IO a
-runServer config (ServerPartT f) = ServerPartT $ \request ->
-  WebT (evalStateT (unWebT $ f request) config)
+run173Server :: Config -> ServerT ServerM a -> ServerT IO a
+run173Server config (ServerT f) = ServerT $ \request ->
+  evalStateT (f request) config
 
-runServerParts :: Config -> [ServerPartT ServerM a] -> [ServerPartT IO a]
-runServerParts config parts = map (runServer config) parts

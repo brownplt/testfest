@@ -1,11 +1,12 @@
 module CS173.Data where
 
+import Database.CouchDB
 import Text.JSON
 import Database.CouchDB.JSON
 import Data.Maybe (isNothing,fromJust)
 
 data Assignment = Assignment
-  { assignmentId :: String
+  { assignmentId :: Doc
   , assignmentDesc :: String
   , assignmentEnabled :: Bool
   , assignmentEnd :: Maybe Integer
@@ -16,11 +17,11 @@ data Assignment = Assignment
   , asgnSingleTestSuite :: Bool -- ^single test suite assignments only
                                 -- have a single test suite per user
                                 -- active at a time
-  , assignmentSolutionId :: String
+  , assignmentSolutionId :: Doc
   } deriving (Show)
 
 data User = User
-  { userId :: String
+  { userId :: Doc
   , userEnabled :: Bool
   , userPassword :: String
   , userAdmin :: Bool
@@ -30,9 +31,9 @@ data User = User
 data Submission = Submission String
 
 data TestSuite = TestSuite
-  { testSuiteUserId :: String
-  , testSuiteAssignmentId :: String
-  , testSuiteSubmissionId :: String
+  { testSuiteUserId :: Doc
+  , testSuiteAssignmentId :: Doc
+  , testSuiteSubmissionId :: Doc
   , tsStatus :: TestSuiteStatus
   , testSuiteTime :: Integer
   } deriving (Show)
@@ -41,22 +42,22 @@ data TestSuite = TestSuite
 data TestStatus = TestPending | TestOK | TestError String deriving (Show)
 
 data Program = Program
-  { programUserId :: String
-  , programAssignmentId :: String
+  { programUserId :: Doc
+  , programAssignmentId :: Doc
   , programTime :: Integer
   , programStatus :: TestStatus
-  , programSubmissionId :: String
+  , programSubmissionId :: Doc
   }
 
 data Report = Report
-  { repTestId :: String
-  , repProgId :: String
-  , repAsgnId :: String
+  { repTestId :: Doc
+  , repProgId :: Doc
+  , repAsgnId :: Doc
   , repNumErrors :: Int
   , repMsg :: String
   , repTime :: Integer
-  , repProgUserId :: String
-  , repTestUserId :: String
+  , repProgUserId :: Doc
+  , repTestUserId :: Doc
   , repTestTime :: Integer
   , repProgTime :: Integer
   } 
@@ -113,13 +114,6 @@ instance JSON Program where
       , ("subid", showJSON subid)
       ]
 
-data SubmissionResult = SubmissionResult
-  { submissionId :: String
-  , submissionProgramId :: String
-  , submissionTestIds :: [String]
-  , submissionMessage :: String
-  }
-
 isActiveAssignment :: Integer -> Assignment -> Bool
 isActiveAssignment now asgn =
   assignmentEnabled asgn && 
@@ -148,8 +142,8 @@ instance JSON User where
 
   showJSON (User id enabled password admin) =
     JSObject $ toJSObject
-      [ ("id",JSString $ toJSString id)
-      , ("password",JSString $ toJSString password)
+      [ ("id", showJSON id)
+      , ("password",showJSON password)
       , ("enabled",JSBool enabled)
       , ("admin", showJSON admin)
       ]
@@ -185,7 +179,7 @@ instance JSON TestSuiteStatus where
       otherwise -> fail $ "invalid test suite status: " ++ status
 
   showJSON val = 
-    JSObject (toJSObject $ ("stat",JSString $ toJSString $ status val)
+    JSObject (toJSObject $ ("stat",showJSON $ status val)
                            :(msg val)) where
       msg (TestSuiteMachineCheckError s) = [("message",showJSON s)]
       msg (TestSuiteTACheckError s) = [("message",showJSON s)]
@@ -230,14 +224,14 @@ instance JSON Assignment where
   showJSON (Assignment id desc enabled end testCmd solnCmd 
                        testLang solnLang singleTestSuite solnId) =
     JSObject $ toJSObject
-      [ ("id", JSString $ toJSString id)
-      , ("desc", JSString $ toJSString desc)
+      [ ("id", showJSON id)
+      , ("desc", showJSON desc)
       , ("enabled", JSBool enabled)
       , ("endtime", JSRational end')
-      , ("testcmd", JSString $ toJSString testCmd)
-      , ("solncmd", JSString $ toJSString solnCmd)
-      , ("testlang", JSString $ toJSString testLang)
-      , ("solnlang", JSString $ toJSString solnLang)
+      , ("testcmd", showJSON testCmd)
+      , ("solncmd", showJSON solnCmd)
+      , ("testlang", showJSON testLang)
+      , ("solnlang", showJSON solnLang)
       , ("singletestsuite", showJSON singleTestSuite)
       , ("solnid", showJSON solnId)
       ] where end' = case end of
@@ -245,7 +239,7 @@ instance JSON Assignment where
                 Just n -> fromIntegral n
 
 data ProgramInfo = ProgramInfo 
-  { pid :: String -- ^test suite id
+  { pid :: Doc -- ^test suite id
   , piStatus :: TestStatus -- ^test suite status
   , piTime :: Integer
   }
@@ -279,9 +273,9 @@ instance JSON TestSuite where
 
   showJSON (TestSuite userId asgnId body status time) = 
     JSObject $ toJSObject
-      [ ("userid",JSString $ toJSString userId)
-      , ("asgnid",JSString $ toJSString asgnId)
-      , ("body", JSString $ toJSString body)
+      [ ("userid", showJSON userId)
+      , ("asgnid", showJSON asgnId)
+      , ("body", showJSON body)
       , ("status", showJSON status)
       , ("time", showJSON time)
       ]

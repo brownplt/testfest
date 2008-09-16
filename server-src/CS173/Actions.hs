@@ -2,7 +2,6 @@ module CS173.Actions where
 
 import System.Log.Logger
 import Database.CouchDB
-import Database.CouchDB.Safety
 import Text.JSON
 import CS173.Data
 import System.Time
@@ -78,9 +77,9 @@ dbSubmissions  = db "submissions"
 dbPrograms = db "programs"
 dbRep = db "reports"
 
-login :: String -> String -> CouchMonad LoginResult
+login :: Doc -> String -> CouchMonad LoginResult
 login username pw = do
-  result <- getDoc dbUsers (doc username)
+  result <- getDoc dbUsers username
   case result of
     Nothing -> return LoginFailed -- no account
     Just (_,_,User _ False _ _) -> return LoginFailed -- account disabled
@@ -89,35 +88,35 @@ login username pw = do
     Just (_,_,User _ _ _ True) -> return LoginAdmin
 
 
-newLogin :: String 
-         -> String 
+newLogin :: Doc 
+         -> String
          -> CouchMonad Bool
 newLogin user pass = do
-  r <- newNamedDoc dbUsers (doc user) (User user True pass False)  -- not admin
+  r <- newNamedDoc dbUsers user (User user True pass False)  -- not admin
   case r of
     Left _ -> return False
     Right _ -> return True
 
-getSubmission :: String -> CouchMonad (Maybe String)
+getSubmission :: Doc -> CouchMonad (Maybe String)
 getSubmission id = do
-  liftIO $ debugM "tourney" ("getting submission " ++ id)
-  r <- getDoc dbSubmissions (doc id)
+  r <- getDoc dbSubmissions id
   case r of
     Just (_,_,(Submission body)) -> return (Just body)
     Nothing -> return Nothing
 
-newSubmission :: String -> CouchMonad String
+newSubmission :: String -> CouchMonad Doc
 newSubmission body = do
   (id,_) <- newDoc dbSubmissions (Submission body)
-  return (fromJSString id)
+  return id
 
 newTest :: TestSuite
-        -> CouchMonad JSString
+        -> CouchMonad Doc
 newTest test = do
   asgn <- getAssignment (testSuiteAssignmentId test)
   unless (assignmentEnabled asgn) $
-    fail $ "Attempt by " ++ testSuiteUserId test ++ " to submit a test for " ++
-           assignmentId asgn ++ ", which is not currently enabled"
+    fail $ "Attempt by " ++ show (testSuiteUserId test) ++ 
+           " to submit a test for " ++
+           show (assignmentId asgn) ++ ", which is not currently enabled"
   (id,_) <- newDoc dbSuites test
   return id
 
@@ -128,37 +127,37 @@ setTestSuiteStatus testId val = do
     Nothing -> return False
 
 updateTestSuiteStatus :: (TestSuiteStatus -> TestSuiteStatus)
-                      -> String
-                      -> CouchMonad (Maybe String)
+                      -> Doc
+                      -> CouchMonad (Maybe Rev)
 updateTestSuiteStatus f testId = 
-  getAndUpdateDoc dbSuites (doc testId)
+  getAndUpdateDoc dbSuites testId
     (\testSuite -> testSuite { tsStatus = f (tsStatus testSuite) })
 
 
-disableExistingTests :: String -- ^assignment id
-                     -> String -- userid
+disableExistingTests :: Doc -- ^assignment id
+                     -> Doc -- userid
                      -> CouchMonad ()
 disableExistingTests asgnId userId = do
   enabledTests <- queryViewKeys dbSuites (doc "suites") (doc "enabledbyuser")
                     [("key",JSArray [ showJSON asgnId, showJSON userId])]
   mapM_ (updateTestSuiteStatus (const TestSuiteSuperseded)) enabledTests
 
-newProgram :: Program -> CouchMonad String
+newProgram :: Program -> CouchMonad Doc
 newProgram prog = do
   (id,_) <- newDoc dbPrograms prog
-  return (fromJSString id)
+  return id
 
-getAssignment :: String -> CouchMonad Assignment
+getAssignment :: Doc -> CouchMonad Assignment
 getAssignment id = do
-  result <- getDoc dbAsgn (doc id)
+  result <- getDoc dbAsgn id
   case result of
     Just (_,_,val) -> return val
-    Nothing -> error $ "assignment not found: " ++ id
+    Nothing -> error $ "assignment not found: " ++ show id
 
 addAssignment :: Assignment
               -> CouchMonad Bool -- ^'False' if it exists
 addAssignment assignment = do
-  result <- newNamedDoc dbAsgn (doc $ assignmentId assignment) assignment
+  result <- newNamedDoc dbAsgn (assignmentId assignment) assignment
   case result of
     Left err -> return False
     Right ok -> return True
@@ -199,11 +198,11 @@ activeAssignments = do
   (TOD now _) <- liftIO $ getClockTime
   return (filter (isActiveAssignment now) allAssignments)
 
-updateProgramStatus :: String -- ^program id
+updateProgramStatus :: Doc -- ^program id
                     -> TestStatus
                     -> CouchMonad ()
 updateProgramStatus progId status = do
-  r <- getDoc dbPrograms (doc progId)
+  r <- getDoc dbPrograms progId
   case r of
     Nothing -> do
       liftIO $ errorM "tourney.actions" 
@@ -213,23 +212,23 @@ updateProgramStatus progId status = do
       r <- updateDoc dbPrograms (id,rev) (val { programStatus = status })
       return ()
 
-getProgram :: String -> CouchMonad Program
+getProgram :: Doc -> CouchMonad Program
 getProgram progId = do
-  r <- getDoc dbPrograms (doc progId)
+  r <- getDoc dbPrograms progId
   case r of
     Just (_,_,val) -> return val
-    Nothing -> fail $ "non-existant program: " ++ progId
+    Nothing -> fail $ "non-existant program: " ++ show progId
 
-getTestSuite :: String -- ^test suite id
+getTestSuite :: Doc -- ^test suite id
              -> CouchMonad TestSuite
 getTestSuite testId = do
-  r <- getDoc dbSuites (doc testId)
+  r <- getDoc dbSuites testId
   case r of
     Just (_,_,val) -> return val
     Nothing -> fail "non-existant test suite"
 
-getUserProgs :: String -- ^username
-             -> String -- ^assignment id
+getUserProgs :: Doc -- ^username
+             -> Doc -- ^assignment id
              -> Integer -- ^since
              -> CouchMonad [ProgramInfo]
 getUserProgs userId asgnId since = do
@@ -238,25 +237,25 @@ getUserProgs userId asgnId since = do
   return (map snd r)
 
 getUserTestSuites :: String -- ^username
-                  -> String -- ^assignment id
+                  -> Doc -- ^assignment id
                   -> CouchMonad [TestSuite]
 getUserTestSuites userId asgnId = do
   r <- queryView dbSuites (doc "suites") (doc "byuser")
        [ ("key",JSArray [showJSON userId,showJSON asgnId]) ]
   return (map snd r)
   
-getAvailableTests :: String -- ^assignment id
+getAvailableTests :: Doc -- ^assignment id
                   -- | test id and submission id list
-                  -> CouchMonad [(String,String)]
+                  -> CouchMonad [(Doc,Doc)]
 getAvailableTests asgnId = do
  r <- queryView dbSuites (doc "suites") (doc "availableTests")
-        [("key",JSString $ toJSString asgnId)]
- return $ map (\(id,subid) -> (fromJSString id,subid)) r
+        [("key",showJSON asgnId)]
+ return $ map (\(id,subid) -> (id,subid)) r
 
-getTestsForApproval :: String -- ^assignment id
-                    -> CouchMonad [(String,TestSuite)]
+getTestsForApproval :: Doc -- ^assignment id
+                    -> CouchMonad [(Doc,TestSuite)]
 getTestsForApproval asgnId = do
   r <- queryView dbSuites (doc "suites") (doc "submittedTests" )
-         [("key",JSString $ toJSString asgnId)]
-  return $ map (\(id,val) -> (fromJSString id,val)) r
+         [("key", showJSON asgnId)]
+  return $ map (\(id,val) -> (id,val)) r
 

@@ -7,18 +7,15 @@ import CS173.Tourney
 import CS173.Data
 import CS173.Config
 import Database.CouchDB
-import Database.CouchDB.Safety
 import Control.Monad.Trans
-import Sessions
 
 makeSample :: Config -> IO ()
 makeSample cfg = runConfig cfg $ do
-  liftIO initSessions
   liftIO $ runCouchDB' $ do
     initDatabase
-    newLogin "arjun" "arjun"
+    newLogin (doc "arjun") "arjun"
     solutionId <- newSubmission aeSolution
-    addAssignment $ Assignment "ae" "Arithmetic Interpreter" True Nothing
+    addAssignment $ Assignment (doc "ae") "Arithmetic Interpreter" True Nothing
                       aeTestCmd aeSolnCmd
                       "" "plai" True solutionId
     getAndUpdateDoc (db "users") (doc "arjun")
