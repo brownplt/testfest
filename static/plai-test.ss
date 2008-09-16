@@ -72,6 +72,7 @@
                ,(if abridged-results 
                     '(abridged-test-output true)
                     '(abridged-test-output false))
+               (plai-ignore-exn-strings true)
                ,@(map syntax->datum (read-program test-suite))
                plai-all-test-results))))))))
 
