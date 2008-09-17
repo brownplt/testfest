@@ -109,7 +109,7 @@ newProgram userId = do
       True -> do
         submissionId <- Action.newSubmission body
         now <- Action.getTime
-        let prog = Program userId asgnId now TestPending submissionId
+        let prog = Program (doc userId) asgnId now TestPending submissionId
         programId <- Action.newProgram prog
         return (True,show programId)
       False -> return (False,"assignment not enabled")
@@ -258,7 +258,7 @@ allAsgns userId = do
   jsonResponse True (JSArray $ catMaybes value)
 
 numTestSuites userId  = do
-  asgnId <- jsonInput "id"
+  asgnId::Int <- jsonInput "id"
   r <- couchIO $ queryView (db "suites") (doc "byasgn") (doc "numtests")
                            [("key",showJSON asgnId)]
   case r of
@@ -366,7 +366,7 @@ api = anyOf
   , userService "testsuites" testSuites 
   , userService "programs" programs
   , userService "numtests" numTestSuites
-  , dir "isadmin"  isAdminSession 
+  , dir "isadmin"  $ isAdminSession  >>= \r -> jsonResponse r r
   , adminService "pendingapproval" pendingApproval
   , adminService "setteststatus" setTestStatus
   , adminService "code"  getSubmissionBody 

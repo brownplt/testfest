@@ -5,7 +5,6 @@ import System.IO
 import System.Environment
 import System.Exit
 import Database.CouchDB
-import Database.CouchDB.Safety
 import System.Random
 import Control.Monad
 import Data.List (sort)
@@ -55,8 +54,8 @@ notifyUsers maybeSuffix users = mapM_ (notifyUser maybeSuffix) users
 createAccount ms u = do
   let userId = applySuffix ms u
   password <- mapM (const $ randomRIO ('A','Z')) [1..10] -- 10 char password
-  r <- runCouchDB' $ newNamedDoc (db "users") (doc userId )
-                                 (User userId True password False)
+  r <- runCouchDB' $ newNamedDoc (db "users") (doc userId)
+                                 (User (doc userId) True password False)
   case r of
     Left _ -> putStrLn $ userId ++ " already exists, moving on."
     Right _ -> return ()
