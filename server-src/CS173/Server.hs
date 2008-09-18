@@ -57,20 +57,20 @@ adminService path f = dir path $ do
   return (setHeader "Cache-Control" "no-store, must-revalidate" r)
 
 loginService = do
-  username <- jsonInput "username" -- TODO: why the different formats?
+  username <- stringInput "username"
   password <- stringInput "password"
   method POST
   sessionLength <- lift $ getSessionLength
-  r <- couchIO $ Action.login username password
+  r <- couchIO $ Action.login (doc username) password
   case r of
     LoginFailed -> do
       jsonResponse False "invalid username or password"
     LoginUser -> do 
-      f <- setSession (show username)
+      f <- setSession username
       r <- jsonResponse True ""
       return (f r)
     LoginAdmin -> do 
-      f <- setAdminSession (show username)
+      f <- setAdminSession username
       r <- jsonResponse True ""
       return (f r)
 
@@ -91,17 +91,18 @@ assignments userId = do
 
 newTest userId = do
   body <- stringInput "test"
-  asgnId <- jsonInput "assignment"
+  asgnId <- docInput "assignment"
   couchIO $ do
     subId <- Action.newSubmission body 
     now <- Action.getTime
-    let testSuite = TestSuite (doc userId) asgnId subId TestSuiteSubmitted now
+    let testSuite = TestSuite (doc userId) asgnId subId 
+                              TestSuiteSubmitted now
     Action.newTest testSuite
   jsonResponse True "test received; processing"
 
 
 newProgram userId = do
-  asgnId <- jsonInput "asgnid"
+  asgnId <- docInput "asgnid"
   body <- stringInput "prog"
   r <- couchIO $ do
     asgn <- Action.getAssignment asgnId
@@ -116,18 +117,19 @@ newProgram userId = do
   jsonResponse (fst r) (snd r)
 
 testSuites userId = do
-    asgnId <- jsonInput "asgnid"
+    asgnId <- docInput "asgnid"
     r <- couchIO $ Action.getUserTestSuites userId asgnId
     jsonResponse True r
 
 programs userId = do 
-    asgnId <- jsonInput "asgnid"
+    asgnId <- docInput "asgnid"
     now <- Action.getTime
+    liftIO $ putStrLn userId
     r <- couchIO $ Action.getUserProgs (doc userId) asgnId now
     jsonResponse True r
 
 pendingApproval userId  = do
-    asgnId <- jsonInput "asgnid"
+    asgnId <- docInput "asgnid"
     r <- couchIO $ Action.getTestsForApproval asgnId
     jsonResponse True r
 
@@ -152,7 +154,7 @@ setTestStatus adminId  = do
   jsonResponse r ""
 
 getSubmissionBody userId  = do
-    id <- jsonInput "id"
+    id <- docInput "id"
     r <- couchIO $ Action.getSubmission id
     case r of
       Just body -> jsonResponse True body
@@ -195,21 +197,21 @@ reportAPICallError =  do
   jsonResponse False  "not logged in or invalid request"
 
 getGold userId  = do
-    id <- jsonInput "id"
+    id <- docInput "id"
     (isSuccess,value) <- couchIO $ do
-      r <- getDoc (db "assignment") (doc id)
+      r <- getDoc (db "assignment") id
       case r of
         Nothing -> do
           liftIO $ errorM "tourney.admin" 
-            ("attempt by " ++ userId ++ " to get the solution for " ++ id ++
-             ", which is a non-existant assignment")
+            ("attempt by " ++ userId ++ " to get the solution for " ++ 
+             show id ++ ", which is a non-existant assignment")
           return (False,"that assignment does not exist")
         Just (_,_,asgn) -> do
           r <- getDoc (db "submissions") (assignmentSolutionId asgn)
           case r of
             Nothing -> do
               liftIO $ errorM "tourney.admin"
-                ("the gold solution for " ++ id ++ " does not exist " ++
+                ("the gold solution for " ++ show id ++ " does not exist " ++
                  "(detected while " ++ userId ++ " tried to see it)")
               return (False,"no solution exists")
             Just (_,_,Submission sol) -> return (True,sol)
@@ -258,7 +260,7 @@ allAsgns userId = do
   jsonResponse True (JSArray $ catMaybes value)
 
 numTestSuites userId  = do
-  asgnId::Int <- jsonInput "id"
+  asgnId <- docInput "id"
   r <- couchIO $ queryView (db "suites") (doc "byasgn") (doc "numtests")
                            [("key",showJSON asgnId)]
   case r of
@@ -282,17 +284,24 @@ newAsgn userId = do
   jsonResponse isSuccess value
 
 isAsgnEnabled userId  = do
-    asgnId <- jsonInput "id"
+    asgnId <- docInput "id"
     (isSuccess,value) <- couchIO $ do
-      r <- getDoc (db "assignment") (doc asgnId)
+      r <- getDoc (db "assignment") asgnId
       case r of
         Nothing -> do
-          liftIO $ errorM "tourney.admin" (asgnId ++ " assignment does " ++
+          liftIO $ errorM "tourney.admin" (show asgnId ++ " assignment does " ++
                      " not exist (checking if enabled)")
           return (False,False)
         Just (_,_,asgn) -> do
           return (True,assignmentEnabled asgn)
     jsonResponse isSuccess value
+
+docInput :: Monad m  => String -> ServerT m Doc
+docInput fieldName = do
+  raw <- stringInput fieldName
+  case isDocString raw of
+    True -> return (doc raw)
+    False -> fail $ "not a Doc " ++ fieldName
 
 jsonInput :: (Monad m, JSON a) => String -> ServerT m a
 jsonInput fieldName = do
@@ -316,7 +325,7 @@ setAsgnEnabled userId = do
   jsonResponse isSuccess False
 
 currentTests userId  = do
-  asgnId <- jsonInput "id"
+  asgnId <- stringInput "id"
   r <- couchIO $ do
     testIds <- queryViewKeys (db "suites") (doc "suites")
                  (doc "availableTests") [("key",JSString $ toJSString asgnId)]
@@ -326,14 +335,14 @@ currentTests userId  = do
     
 
 forgotPassword = do
-  userId <- jsonInput "id"
+  userId <- docInput "id"
   method POST
-  r <- couchIO $ getDoc (db "users") (doc userId)
+  r <- couchIO $ getDoc (db "users") userId
   case r of
     -- don't leak existence of the account
     Nothing -> jsonResponse True ""
     Just (_,_,user) -> do
-      liftIO $ mailFrom "cs173tas@cs.brown.edu" [userId]
+      liftIO $ mailFrom "cs173tas@cs.brown.edu" [show userId]
                  "[testfest] password reminder"
                  ("Your password is: " ++ userPassword user)
       jsonResponse True ""

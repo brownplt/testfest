@@ -3,7 +3,7 @@
 
 if [ `hostname` = "wanderlust.local" ]; then
   echo "Running on http://127.0.0.1:8080/"
-  ./dist/build/tourney-server/tourney-server -s work $@
+  ./dist/build/tourney-server/tourney-server $@
 elif [ `hostname` = "cs173" ]; then
   echo "Running on http://cs173.cs.brown.edu:80"
   /home/csadmin/tourney/tourney-server --listen-port 80 -s tmp $@

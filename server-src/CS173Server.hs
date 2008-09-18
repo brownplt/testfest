@@ -1,6 +1,6 @@
 module Main where
 
-import Paths_CS173Tourney -- created by Cabal
+import Paths_173Tourney -- created by Cabal
 import Logging
 import System.Log.Logger
 import System.Log.Handler.Simple
@@ -18,6 +18,7 @@ import qualified System.FilePath as Path
 
 data Flag
   = Help
+  | Inplace
   | Port String
   | SessionSecret String
   | DebugMsgs
@@ -29,6 +30,8 @@ options :: [OptDescr Flag]
 options =
   [ Option ['h'] ["help"] (NoArg Help)
       "display this help message"
+  , Option ['i'] ["in-place"] (NoArg Inplace)
+      "run the server in-place (from the build directory)"
   , Option [] ["listen-port"] (ReqArg Port "PORT")
       "server port (defaults to 8080)"
   , Option [] ["session-secret"] (ReqArg SessionSecret "SECRET")
@@ -44,9 +47,6 @@ options =
 string2words :: String -> [Octet]
 string2words = map (fromIntegral . ord) -- TODO : ensure range check
 
-dropIndex "index.html" = []
-dropIndex (x:xs) = x:(dropIndex xs)
-dropIndex [] = error "index.html not found"
 
 main = do
   args <- getArgs
@@ -55,7 +55,7 @@ main = do
     fail (concat errs)
   opts <- return $ sort opts
   checkHelp opts
-  dataDir <- getDataDir
+  (dataDir,opts) <- getDataDirAndInplace opts
   let staticRoot = Path.joinPath [ dataDir, "web" ]
   let plaiTestPath = dataDir
   
@@ -70,6 +70,7 @@ main = do
   setupLogging maybeLogEmail maybeLogFile logLevel
   case cmds of
     [] -> do noticeM "tourney" "Starting tourney-server."
+             noticeM "tourney" $ "static root is " ++ staticRoot
              server port cfg 
     ["server"] -> do noticeM "tourney" "Starting tourney-server..."
                      server port cfg
@@ -98,6 +99,12 @@ checkHelp (Help:_) = do
   putStrLn (usageInfo  "tourney-server -s PATH:" options)
   exitFailure
 checkHelp _ = return ()
+  
+getDataDirAndInplace (Inplace:opts) =
+  return ("static/",opts)
+getDataDirAndInplace opts = do
+  dir <- getDataDir
+  return (dir,opts)
 
 getPort ((Port p):rest) = return (read p,rest)
 getPort rest = do
