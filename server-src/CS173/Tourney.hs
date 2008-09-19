@@ -1,5 +1,6 @@
 module CS173.Tourney where
 
+import Paths_173Tourney -- created by Cabal
 import Data.IORef
 import Data.Maybe (fromJust)
 import qualified Data.Maybe as Y
@@ -74,6 +75,31 @@ withTempFile :: FilePath -> FilePath -> (FilePath-> Handle -> IO a) -> IO a
 withTempFile dir template action = do
   (path,handle) <- openTempFile dir template
   action path handle `finally` (hClose handle  >> removeFile path)
+
+
+executeTest :: String -- ^test command
+            -> String -- ^solution body
+            -> String -- ^test suite body
+            -> IO (Either String ()) -- ^ report for student on errors
+executeTest testCmd solutionBody testBody = do
+  plaiTest <- getDataDir
+  dir <- getTemporaryDirectory
+  result <- withTempFile dir "solution.ss" $ \solutionPath hSolution -> do
+    withTempFile dir "test-suite.ss" $ \testSuitePath hTestSuite -> do
+      let cmd = substCommand testCmd plaiTest (takeFileName solutionPath)
+                             (takeFileName testSuitePath)
+      hPutStr hSolution solutionBody >> hFlush hSolution >> hClose hSolution
+      hPutStr hTestSuite testBody >> hFlush hTestSuite >> hClose hTestSuite
+      setCurrentDirectory dir
+      -- Run for at most 60 seconds of real time.  The test script is expected
+      -- to limit the CPU time and memory consumption.
+      runCommandTimed  cmd 60
+  case result of
+    Nothing -> return (Left "Took too much time (> 60 seconds of real time)")
+    Just (0,stdoutStr,stderrStr) -> return (Right ())
+    Just (_,stdoutStr,stderrStr) -> return (Left stderrStr)
+  
+
 
 runTest :: String -- ^test command
         -> String -- ^ test suite

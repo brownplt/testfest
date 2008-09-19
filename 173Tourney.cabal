@@ -36,3 +36,14 @@ Executable cs173tourney-accounts
   ghc-options:    -fwarn-incomplete-patterns -threaded
   Extensions:
     FlexibleInstances PatternSignatures
+
+Executable 173finalround
+  Main-Is:        FinalRound.hs
+  Hs-Source-Dirs: server-src
+  Build-Depends:
+    base, network, mtl, containers, directory, bytestring, old-time,
+    CouchDB==0.8.0.4,json>=0.3.3,process,hslogger>=1.0.5,
+    time>=1.1.2.1,old-locale,random>=1.0.0.0
+  ghc-options:    -fwarn-incomplete-patterns -threaded
+  Extensions:
+    FlexibleInstances PatternSignatures
