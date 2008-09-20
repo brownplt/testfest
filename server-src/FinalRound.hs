@@ -26,7 +26,12 @@ options =
       "display this help message"
   ]
 
-usage = usageInfo "173finalround ASGNID SOLUTION-FILE" options
+usage = usageInfo 
+  "173finalround assignment-id solution-file folder ...\n\
+  \\n\
+  \If you don\'t specify folders, the tourney will search all sub-folders of\n\
+  \the current directory for solution-file.\n"
+  options
 
 checkHelp :: [Flag] -> IO ()
 checkHelp (Help:_) = do
@@ -41,7 +46,11 @@ main = do
   unless (null errs) $ fail $ concat $ L.intersperse "\n" (map show errs)
   checkHelp opts
   case cmds of
-    [asgnId,solutionName] -> runFinalRound (doc asgnId) solutionName
+    [asgnId,solutionName] -> do
+      students <- getSubdirectories "."
+      runFinalRound students (doc asgnId) solutionName
+    (asgnId:solutionName:student1:students) -> do
+      runFinalRound (student1:students) (doc asgnId) solutionName
     otherwise -> putStrLn usage >> exitFailure
 
 getSubdirectories :: FilePath -> IO [FilePath]
@@ -70,9 +79,8 @@ getSubmission' subId = do
       liftIO exitFailure              
     Just v -> return v
 
-runFinalRound :: Doc ->  FilePath -> IO ()
-runFinalRound asgnId solutionName = do
-  students <- getSubdirectories "."
+runFinalRound :: [FilePath] -> Doc ->  FilePath -> IO ()
+runFinalRound students asgnId solutionName = do
   base <- getCurrentDirectory
   mapM_ (assertSolutionExists solutionName) students
   runCouchDB' $ do
