@@ -1,5 +1,6 @@
 module Main where
 
+import CS173.NormalizeSubmissions
 import CS173.Data
 import System.Console.GetOpt
 import System.FilePath
@@ -72,6 +73,7 @@ getSubmission' subId = do
 runFinalRound :: Doc ->  FilePath -> IO ()
 runFinalRound asgnId solutionName = do
   students <- getSubdirectories "."
+  base <- getCurrentDirectory
   mapM_ (assertSolutionExists solutionName) students
   runCouchDB' $ do
     asgn <- getAssignment asgnId
@@ -80,13 +82,19 @@ runFinalRound asgnId solutionName = do
     testBodies <- mapM getSubmission' testSubmissionIds
 
     let runTests studentId = do
-          solutionBody <- liftIO $ readFile (studentId</>solutionName)
-          results <- mapM (executeTest (asgnSolnCmd asgn)  solutionBody)
+          liftIO $ putStrLn $ "Running tests for " ++ show studentId
+          solutionBody <- liftIO $ readFile (base</>studentId</>solutionName)
+          results <- mapM (executeTest (asgnSolnCmd asgn)
+                             (standardizeLang (asgnSolnLang asgn) solutionBody))
                            testBodies
           let processResult (Right (),testId,testBody) = return ()
               processResult (Left msg,testId,testBody) = do
-                writeFile (studentId</>testId `addExtension` "ss") testBody
-                writeFile (studentId</>testId `addExtension` "txt") msg
+                putStrLn $ "...failed test suite " ++ testId
+                let filename = show asgnId ++ "-" ++ testId
+                writeFile (base</>studentId</>filename `addExtension` "ss") 
+                          testBody
+                writeFile (base</>studentId</>filename `addExtension` "txt") 
+                          msg
           mapM_ processResult (zip3 results (map (show.fst) tests) testBodies)
 
     liftIO $ mapM_ runTests students

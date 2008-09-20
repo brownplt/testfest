@@ -5,10 +5,10 @@ if [ `hostname` = "wanderlust.local" ]; then
   ./Setup.lhs configure --user --prefix=/Users/arjun/local && \
   ./Setup.lhs build
 elif [ `hostname` = "peabody" ]; then
-  echo "Building on peabody for deployment to cs173"
-  ./Setup.lhs configure --user --prefix=/tourney && \
+  echo "Building on peabody for /course/cs173/testfest"
+  ./Setup.lhs configure --prefix=/course/cs173/testfest && \
   ./Setup.lhs build
-  ./Setup.lhs copy --destdir=cs173
+  ./Setup.lhs install
 
 else
   echo "ERROR: Don't know how to build on " `hostname`
