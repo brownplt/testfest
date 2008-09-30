@@ -40,7 +40,7 @@ jsonResponse isSuccess val = do
 userService :: (Monad m, MonadIO m, SessionInfo m)
             => String -> (String -> ServerT m Response) 
             -> ServerT m Response
-userService path f = dir path $ do
+userService path f = dirEnd path $ do
   method POST
   userId <- requireSession
   liftIO $ infoM "tourney.user" (userId ++ " requested " ++ path)
@@ -50,7 +50,7 @@ userService path f = dir path $ do
 adminService :: (Monad m, MonadIO m, SessionInfo m)
              => String -> (String -> ServerT m Response) 
              -> ServerT m Response
-adminService path f = dir path $ do
+adminService path f = dirEnd path $ do
   method POST
   userId <- requireAdminSession
   liftIO $ infoM "tourney.admin" (userId ++ " requested " ++ path)
@@ -376,11 +376,11 @@ requestHandler config =
   asHandler $ run173Server config (dir "api" api `mplus` files config)
 
 api = anyOf
-  [ dir "ping" $ (return $ ok $ toResponse "pong")
-  , dir "login" loginService
-  , dir "logout" $ return (logoutSession "")
+  [ dirEnd "ping" $ (return $ ok $ toResponse "pong")
+  , dirEnd "login" loginService
+  , dirEnd "logout" $ return (logoutSession "")
   -- , dir "newuser"  newUserService 
-  , dir "forgotpassword"  forgotPassword 
+  , dirEnd "forgotpassword"  forgotPassword 
   , userService "changepass" changePass
   , userService "assignments" assignments
   , adminService "allasgns" allAsgns 
@@ -389,7 +389,7 @@ api = anyOf
   , userService "testsuites" testSuites 
   , userService "programs" programs
   , userService "numtests" numTestSuites
-  , dir "isadmin"  $ isAdminSession  >>= \r -> jsonResponse r r
+  , dirEnd "isadmin"  $ isAdminSession  >>= \r -> jsonResponse r r
   , adminService "pendingapproval" pendingApproval
   , adminService "setteststatus" setTestStatus
   , adminService "code"  getSubmissionBody 
