@@ -4,6 +4,7 @@ import Mail
 import Control.Monad
 import System.Log.Logger
 import Network.WebServer
+import Network.WebServer.HTTP.Listen (listen)
 import Text.JSON
 import Database.CouchDB
 import CS173.Data
@@ -20,11 +21,11 @@ import Data.Maybe (catMaybes)
 import qualified Data.List as L
 import qualified Data.Maybe as Y
 import qualified Data.ByteString as ByteString
+import System.Posix.User (getRealUserID,setUserID)
 
 couchIO = liftIO.runCouchDB'
 
 
-singleton x = [x]
 
 jsonHeader response = setHeader "Content-Type" "application/json" response
 
@@ -359,7 +360,20 @@ maintainThread n threadM = do
 
 server p config = do
   maintainThread 0 (runConfig config (testSuiteTesterThread config))
-  runServer p $ run173Server config (dir "api" api `mplus` files config)
+  -- This is daft. Why can't I join threads in Haskell?
+  mvar <- newEmptyMVar
+  serverThreadId <- forkIO $ do
+    listen (Conf p) (requestHandler config) `finally` putMVar mvar ()
+
+  threadDelay 5000000 -- TODO: stupid hack to ensure we've started listening
+  -- |Program owner should be root with suid bit set.
+  getRealUserID >>= setUserID
+  takeMVar mvar
+  return ()
+
+
+requestHandler config = 
+  asHandler $ run173Server config (dir "api" api `mplus` files config)
 
 api = anyOf
   [ dir "ping" $ (return $ ok $ toResponse "pong")
