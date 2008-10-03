@@ -64,7 +64,7 @@ main = do
   (maybeLogEmail,opts) <- getLogEmail opts
   (logLevel,opts) <- getLogLevel opts
   (maybeLogFile,opts) <- getLogFile opts
-  let sessionLength = 15 * 60 -- in seconds
+  let sessionLength = 120 * 60 -- two hour sessions
   let cfg = Config staticRoot plaiTestPath sessionLength
                    (string2words sessionSecret)
   setupLogging maybeLogEmail maybeLogFile logLevel
