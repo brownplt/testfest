@@ -5,6 +5,10 @@ if [ `hostname -d` != "cs.brown.edu" ]; then
   exit 1
 fi;
 
-rsync -rltovz --copy-links --delete \
-  cs173 \
-  csadmin@cs173.cs.brown.edu:/home/csadmin/inst/
+set DESTDIR = csadmin@cs173.cs.brown.edu:/home/csadmin/inst/
+
+./Setup.lhs configure --user --prefix=/tourney && \
+./Setup.lhs build && \
+./Setup.lhs copy --destdir=cs173 && \
+rsync -rltovz --copy-links --delete cs173 $DESTDIR
+	
