@@ -1,3 +1,6 @@
+;; The first three lines of this file were inserted by DrScheme. They record metadata
+;; about the language level of this file in a form that our tools can easily process.
+#reader(lib "reader.ss" "plai" "lang")
 #!/usr/bin/env mzscheme
 #lang scheme
 (require scheme/sandbox)
@@ -8,7 +11,7 @@
   (cond
     [(string? r) (display r (current-error-port))]
     [(list? r)
-     (for-each (λ (e) (fprintf (current-error-port) "~s~n" e)) r)]
+     (for-each (λ (e) (fprintf (current-error-port) "~v~n" e)) r)]
     [else (display r (current-error-port))]))
 
 
