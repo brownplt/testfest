@@ -5,7 +5,7 @@ if [ `hostname -d` != "cs.brown.edu" ]; then
   exit 1
 fi;
 
-set DESTDIR = csadmin@cs173.cs.brown.edu:/home/csadmin/inst/
+DESTDIR="csadmin@cs173.cs.brown.edu:/home/csadmin/inst/"
 
 ./Setup.lhs configure --user --prefix=/tourney && \
 ./Setup.lhs build && \

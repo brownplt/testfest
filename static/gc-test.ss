@@ -1,6 +1,3 @@
-;; The first three lines of this file were inserted by DrScheme. They record metadata
-;; about the language level of this file in a form that our tools can easily process.
-#reader(lib "reader.ss" "plai" "lang")
 #!/usr/bin/env mzscheme
 #lang scheme
 (require scheme/sandbox)
