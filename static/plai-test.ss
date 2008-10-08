@@ -39,7 +39,7 @@
                    #:cpu-limit [cpu-limit 50]
                    #:abridged-results [abridged-results false]
                    #:halt-on-errors [halt-on-errors false]
-                   #:argument-seven [_ false]
+                   #:print-only-errors [print-only-errors true]
                    #:argument-eight [__ false]
                    #:argument-nine [___ false]
                    #:argument-ten [____ false])
@@ -69,6 +69,9 @@
                (disable-tests true)
                (require ,require-line)
                (disable-tests false)
+               ,(if print-only-errors
+                    '(print-only-errors true)
+                    '(print-only-errors false))
                ,(if halt-on-errors
                     '(halt-on-errors true)
                     '(halt-on-errors false))
