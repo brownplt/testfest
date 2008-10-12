@@ -1048,7 +1048,7 @@ function loginPane(nextE) {
           .filtereq_e(true).constant_e(assignmentPane))
   .lift_e(function(v) {
     server_e('/api/isadmin',one_e({})).lift_e(function (isAdmin_) {
-      isAdmin = isAdmin_;
+      isAdmin = isAdmin_.value;
       nextE.sendEvent(v); 
     });
   });
@@ -1126,7 +1126,7 @@ function start() {
 
   if (isLoggedIn()) {
     server_e('/api/isadmin',one_e({})).lift_e(function (isAdmin_) {
-      isAdmin = isAdmin_;
+      isAdmin = isAdmin_.value;
       pane_e.sendEvent(assignmentPane);
     });
   }

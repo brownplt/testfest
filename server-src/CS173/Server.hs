@@ -389,7 +389,7 @@ api = anyOf
   , userService "testsuites" testSuites 
   , userService "programs" programs
   , userService "numtests" numTestSuites
-  , dirEnd "isadmin"  $ isAdminSession  >>= \r -> jsonResponse r r
+  , dirEnd "isadmin"  $ isAdminSession  >>= \r -> jsonResponse True r
   , adminService "pendingapproval" pendingApproval
   , adminService "setteststatus" setTestStatus
   , adminService "code"  getSubmissionBody 
