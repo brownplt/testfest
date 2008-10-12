@@ -69,10 +69,12 @@ loginService = do
     LoginUser -> do 
       f <- setSession username
       r <- jsonResponse True ""
+      liftIO $ infoM "tourney" (username ++ " logged in")
       return (f r)
     LoginAdmin -> do 
       f <- setAdminSession username
       r <- jsonResponse True ""
+      liftIO $ infoM "tourney" (username ++ " logged in (admin)")
       return (f r)
 
 
