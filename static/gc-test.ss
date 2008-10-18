@@ -18,8 +18,7 @@
                    #:memory-limit [memory-limit 200]
                    #:cpu-limit [cpu-limit 50]
                    #:heap-viz [heap-viz false]
-                   #:abridged-results [abridged-results false]
-                   #:halt-on-errors [halt-on-errors false])
+                   #:abridged-results [abridged-results false])
   (local ([define-values (mutator-base _1 __1) 
             (split-path (path->complete-path mutator))]
           [define-values (collector-base _2 __2) 
@@ -36,11 +35,20 @@
         (with-handlers
             ([exn?
               (lambda (exn)
+                ; If an exception is raised, print the heap to stdout, ...
+                (fprintf (current-error-port)
+                         "~n~n==========~nYour test suite / solution signaled an error.~n")
+                (fprintf (current-error-port)
+                         "~nThe error message was: ~a~n" (exn-message exn))
+                (fprintf (current-error-port)
+                         "~nThe contents of the heap when the error was signalled:~n")
                 (display-results
                  (evaluator
                   (if heap-viz '(heap-as-string) 'plai-all-test-results)))
-                (display (count-errors (evaluator 'plai-all-test-results)))
-                 (error (format "~n~a" (exn-message exn))))])
+                ; Print 1 to stdout so that the tourney knows we failed, ...
+                (display 1)
+                ; Print the error message to stderr and signal an error for the tourney.
+                (error "\n==========\n"))])
           (evaluator
            (with-limits 
             memory-limit cpu-limit
@@ -52,7 +60,7 @@
                (begin-for-syntax
                  (set-alternate-collector! ,collector))
                (gc-disable-import-gc? true)
-               (halt-on-errors ,halt-on-errors)
+               (halt-on-errors true)
                (abridged-test-output ,abridged-results)
                (require ,mutator)
                ,(if heap-viz
@@ -87,18 +95,9 @@
                            (set! interface (read (open-input-string
                                                   (string-append "(" names ")"))))]
      #:args (collector mutator)
-     (let ([results
-            (run-tests #:collector collector
-                       #:mutator mutator
-                       #:memory-limit memory-limit
-                       #:cpu-limit cpu-limit
-                       #:heap-viz heap-viz
-                       #:halt-on-errors halt-on-errors
-                       #:abridged-results abridged-results)])
-              (display-results results)
-       (let ([num-errors (count-errors results)])
-         (when (> num-errors 0)
-           (display num-errors))
-         
-         (when (and error-on-errors (> num-errors 0))
-           (error "\nsome tests failed")))))))
+     (run-tests #:collector collector
+                #:mutator mutator
+                #:memory-limit memory-limit
+                #:cpu-limit cpu-limit
+                #:heap-viz heap-viz
+                #:abridged-results abridged-results))))
