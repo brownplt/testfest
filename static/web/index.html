@@ -711,7 +711,7 @@ function newGCAsgn() {
   var createAsgn = LINK('Create Assignment');
 
   var asgnE = clicks_e(createAsgn).lift_e(function() {
-    var cmd = '%p/gc-test.ss -ar "  + " %s %t';
+    var cmd = '%p/gc-test.ss -ar  %s %t';
     return {
       gold: $F(gold),
       'asgn':
