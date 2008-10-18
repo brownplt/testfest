@@ -55,15 +55,13 @@
                (halt-on-errors ,halt-on-errors)
                (abridged-test-output ,abridged-results)
                (require ,mutator)
-               ,(if heap-viz
-                    '(heap-as-string)
-                    'plai-all-test-results)))))))))
+                    'plai-all-test-results))))))))
 
 (when (>  (vector-length (current-command-line-arguments)) 0)
   (local ([define cpu-limit 50]
           [define memory-limit 100]
           [define interface false]
-          [define heap-viz false]
+          [define heap-viz true]
           [define abridged-results false]
           [define error-on-errors false]
           [define halt-on-errors false])
