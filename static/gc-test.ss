@@ -11,6 +11,7 @@
     [(list? r)
      (for-each (λ (e) (fprintf (current-error-port) "~v~n" e)) r)]
     [else (display r (current-error-port))]))
+(sandbox-eval-limits (list false false))
       
 (define (run-tests #:collector collector
                    #:mutator mutator
