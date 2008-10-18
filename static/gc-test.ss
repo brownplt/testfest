@@ -55,7 +55,9 @@
                (halt-on-errors ,halt-on-errors)
                (abridged-test-output ,abridged-results)
                (require ,mutator)
-                    'plai-all-test-results))))))))
+               ,(if heap-viz
+                    '(heap-as-string)
+                    'plai-all-test-results)))))))))
 
 (when (>  (vector-length (current-command-line-arguments)) 0)
   (local ([define cpu-limit 50]
