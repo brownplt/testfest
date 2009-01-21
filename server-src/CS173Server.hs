@@ -1,6 +1,6 @@
 module Main where
 
-import Paths_173Tourney -- created by Cabal
+import Paths_CS173Tourney -- created by Cabal
 import Logging
 import System.Log.Logger
 import System.Log.Handler.Simple

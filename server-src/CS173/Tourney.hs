@@ -1,6 +1,6 @@
 module CS173.Tourney where
 
-import Paths_173Tourney -- created by Cabal
+import Paths_CS173Tourney -- created by Cabal
 import Data.IORef
 import Data.Maybe (fromJust)
 import qualified Data.Maybe as Y
