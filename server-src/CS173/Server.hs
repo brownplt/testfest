@@ -145,8 +145,8 @@ setTestStatus adminId  = do
   let disable existingTestId = do
         getAndUpdateDoc (db "suites") existingTestId $ \ts -> 
           case tsStatus ts of
-            TestSuiteTACheckOK -> ts { tsStatus = TestSuiteSuperseded }
-            otherwise -> ts
+            TestSuiteTACheckOK -> return $ ts { tsStatus = TestSuiteSuperseded }
+            otherwise -> return ts
   r <- couchIO $ do
          when singleSuite $ do
            existingTests <- queryViewKeys (db "suites") (doc "suites")
@@ -237,7 +237,7 @@ updateGold userId = do
       Just (_,_,asgn) -> do
         r <- getAndUpdateDoc (db "submissions") 
                              (assignmentSolutionId asgn)
-               (const $ Submission sol)
+               (const $ return $ Submission sol)
         case r of
           Nothing -> do
             liftIO $ errorM "tourney.admin"
@@ -318,7 +318,7 @@ setAsgnEnabled userId = do
   enable <- jsonInput "enable"
   isSuccess <- couchIO $ do
     r <- getAndUpdateDoc (db "assignment") (doc asgnId)
-           (\asgn -> asgn { assignmentEnabled = enable })
+           (\asgn -> return $ asgn { assignmentEnabled = enable })
     case r of
       Nothing -> do
         liftIO $ errorM "tourney.admin"

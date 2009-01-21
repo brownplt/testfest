@@ -19,7 +19,7 @@ makeSample cfg = runConfig cfg $ do
                       aeTestCmd aeSolnCmd
                       "" "plai" True solutionId
     getAndUpdateDoc (db "users") (doc "arjun")
-      (\u -> u { userAdmin = True })
+      (\u -> return $ u { userAdmin = True })
     return ()
 
 aeNames = "parse calc AE AE? num num? num-n set-num-n! add add? \

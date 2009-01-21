@@ -131,7 +131,7 @@ updateTestSuiteStatus :: (TestSuiteStatus -> TestSuiteStatus)
                       -> CouchMonad (Maybe Rev)
 updateTestSuiteStatus f testId = 
   getAndUpdateDoc dbSuites testId
-    (\testSuite -> testSuite { tsStatus = f (tsStatus testSuite) })
+    (\testSuite -> return $ testSuite { tsStatus = f (tsStatus testSuite) })
 
 
 disableExistingTests :: Doc -- ^assignment id
