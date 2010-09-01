@@ -22,10 +22,7 @@ DESC="173Tourney"
 NAME=tourney-server
 DAEMON=/home/csadmin/tourney/tourney-server
 DAEMON_ARGS="--listen-port 80 \
-	  -s tmp \
-	  -r static \
-	  -l /home/csadmin/tourney/tourney.log \
-	  -p /home/csadmin/.plt-scheme/4.1/collects/plai"
+	  -l /home/csadmin/tourney/tourney.log"
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 

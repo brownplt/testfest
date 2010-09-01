@@ -84,8 +84,8 @@ executeTest :: String -- ^test command
 executeTest testCmd solutionBody testBody = do
   plaiTest <- getDataDir
   dir <- getTemporaryDirectory
-  result <- withTempFile dir "solution.ss" $ \solutionPath hSolution -> do
-    withTempFile dir "test-suite.ss" $ \testSuitePath hTestSuite -> do
+  result <- withTempFile dir "solution.rkt" $ \solutionPath hSolution -> do
+    withTempFile dir "test-suite.rkt" $ \testSuitePath hTestSuite -> do
       let cmd = substCommand testCmd plaiTest (takeFileName solutionPath)
                              (takeFileName testSuitePath)
       hPutStr hSolution solutionBody >> hFlush hSolution >> hClose hSolution
@@ -97,7 +97,7 @@ executeTest testCmd solutionBody testBody = do
   case result of
     Nothing -> return (Left "Took too much time (> 60 seconds of real time)")
     Just (0,stdoutStr,stderrStr) -> return (Right ())
-    Just (_,stdoutStr,stderrStr) -> return (Left stderrStr)
+    Just (_,stdoutStr,stderrStr) -> return (Left stdoutStr)
   
 
 
@@ -112,8 +112,8 @@ runTest testCommand testText progText testId progId = do
   now <- getTime
   r <- liftIO $ do
     dir <- getTemporaryDirectory
-    withTempFile dir "solution.ss" $ \solutionPath hSolution -> do
-      withTempFile dir "test-suite.ss" $ \testSuitePath hTestSuite -> do
+    withTempFile dir "solution.rkt" $ \solutionPath hSolution -> do
+      withTempFile dir "test-suite.rkt" $ \testSuitePath hTestSuite -> do
         hPutStr hSolution progText
         hFlush hSolution
         hClose hSolution
@@ -142,7 +142,7 @@ runTest testCommand testText progText testId progId = do
         newDoc dbRep (mkRep "" 0)
         return TestOK
       Just (_,outs,errs) -> do
-        newDoc dbRep (mkRep errs (numTests errs))
+        newDoc dbRep (mkRep outs (numTests outs))
         return (TestError errs)
     
 checkTestSuite :: Doc -> ServerM ()
@@ -161,8 +161,8 @@ checkTestSuite testId = do
     (Just goldSolutionText) <- getSubmission (assignmentSolutionId assignment)
     r <- liftIO $ do
       dir <- getTemporaryDirectory
-      withTempFile dir "solution.ss" $ \solutionPath hSolution -> do
-        withTempFile dir "test-suite.ss" $ \testSuitePath hTestSuite -> do
+      withTempFile dir "solution.rkt" $ \solutionPath hSolution -> do
+        withTempFile dir "test-suite.rkt" $ \testSuitePath hTestSuite -> do
           hPutStr hSolution goldSolutionText
           hFlush hSolution
           hClose hSolution
@@ -186,7 +186,7 @@ checkTestSuite testId = do
       Just (code,outs,errs) ->  do
         liftIO $ infoM "tourney.tester" $ show testId ++ 
           " raised errors (exit code: " ++ show code ++ ")"
-        updateTestSuiteStatus (const $ TestSuiteMachineCheckError errs) testId
+        updateTestSuiteStatus (const $ TestSuiteMachineCheckError outs) testId
     return ()
 
 testSuiteTesterThread config = do

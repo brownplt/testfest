@@ -227,7 +227,7 @@ instance JSON Assignment where
       [ ("id", showJSON id)
       , ("desc", showJSON desc)
       , ("enabled", JSBool enabled)
-      , ("endtime", JSRational end')
+      , ("endtime", JSRational True end')
       , ("testcmd", showJSON testCmd)
       , ("solncmd", showJSON solnCmd)
       , ("testlang", showJSON testLang)
