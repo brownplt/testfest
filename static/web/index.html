@@ -652,7 +652,7 @@ function newPLAIAsgn() {
   var createAsgn = LINK('Create Assignment');
 
   var asgnE = clicks_e(createAsgn).lift_e(function() {
-    var cmd = '%p/plai-test.ss -ar -i "' + $F(interface) + '" %s %t';
+    var cmd = '%p/plai-test.sh "' + $F(interface) + '" %s %t';
     return {
       gold: $F(gold),
       'asgn':

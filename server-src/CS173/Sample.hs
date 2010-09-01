@@ -26,9 +26,9 @@ aeNames = "parse calc AE AE? num num? num-n set-num-n! add add? \
 \ add-lhs add-rhs set-add-lhs! set-add-rhs! sub sub? sub-lhs sub-rhs \
 \ set-sub-lhs! set-sub-rhs!"
 
-aeSolnCmd = "%p/plai-test.ss -ar -i \"" ++ aeNames ++ "\" %s %t"
+aeSolnCmd = "%p/plai-test.sh \"" ++ aeNames ++ "\" %s %t"
 
-aeTestCmd = "%p/plai-test.ss -ar -i \"" ++ aeNames ++ "\" %s %t"
+aeTestCmd = "%p/plai-test.sh \"" ++ aeNames ++ "\" %s %t"
 
 aeSolution =
   "#lang plai \

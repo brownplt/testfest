@@ -13,7 +13,7 @@ Synopsis:       test-fest / war-grading system for CS173
 Data-Dir: static
 Data-Files: 
   web/index.html web/style.css  web/lib/tourney.js
-  web/fx/flapjax.js web/lib/prototype.js plai-test.ss gc-test.ss
+  web/fx/flapjax.js web/lib/prototype.js plai-test.sh gc-test.ss
  
 Executable tourney-server
   Main-Is:        CS173Server.hs
