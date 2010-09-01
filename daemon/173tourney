@@ -20,9 +20,9 @@ PATH=/sbin:/usr/sbin:/bin:/usr/bin
 TOURNEY_PATH=/home/csadmin/tourney
 DESC="173Tourney"
 NAME=tourney-server
-DAEMON=/home/csadmin/tourney/tourney-server
-DAEMON_ARGS="--listen-port 80 \
-	  -l /home/csadmin/tourney/tourney.log"
+DAEMON=/home/csadmin/tourney/bin/tourney-server
+DAEMON_ARGS="--listen-port=80 \
+             --log-file=/home/csadmin/tourney.log"
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 
