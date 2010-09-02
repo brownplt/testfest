@@ -108,4 +108,81 @@ error procedure.  For example:
    [(list '+ l r)
     (add (parse l) (parse r))]
    [_ (racket-error 'parse "invalid expression: ~e" sexp)]))
-   ]
+   ]DO NOT USE SPACES IN ASSIGNMENT NAMES (ensure all letters and underscores)
+
+Prerequisites
+-------------
+
+1. CouchDB.  On Mac, get CouchDBX 0.8.1:
+
+http://jan.prima.de/~jan/plok/archives/142-CouchDBX-Revival.html
+
+You double-click to start and it works.  It's incredible.  Click on the play icon, then the magnifying glass icon to see the "Futon" interface at localhost:5984/_utils
+
+2. For the demo, you need DrScheme 4.1.3 and the PLAI software.  In DrScheme, File -> "Install .plt file" and enter the URL:
+
+http://www.cs.brown.edu/~arjun/tmp/plai-4.1.3.plt
+
+For the demo, you need to ensure that mzscheme is in your path (e.g. /Applications/PLT Scheme/bin)
+
+Binaries
+--------
+
+I've compiled binaries for 32-bit Intel on Mac OS X 10.5:
+
+http://www.cs.brown.edu/~arjun/tmp/testfest-2.5.2-intelmac.tgz
+
+I think they are self-contained.  Let me know if you get dyn-linking errors.
+
+Setup
+-----
+
+1. Ensure that CouchDB is running.  If you can visit http://localhost:5984/_utils, it is running.
+
+You first need to setup the database:
+
+> cd testfest
+> ./run sample
+
+If it works correctly, the last line of output will be "Creating views..."
+
+2. ./run to run the server at http://localhost:8080
+
+3. Login as 'arjun' with the password 'arjun' to login as a TA.  As a TA, you can do everything a student can do.  In addition, you can create new assignments, review test suites, etc.
+
+4. You will see a blue bar along the top.  The LHS has a list of assignments (currently, just the "ae" assignment).  The RHS has a "Create new Assignment" "Settings" and "Logout."
+
+Example
+-------
+
+1. Select "ae", select "Test Suites" and submit a new test suite.  For example, try this test suite that doesn't exercise the solution at all:
+
+(test 5 5)
+(test/exn (/ 1 0) "by zero")
+
+Spam the Refresh button until it says "pending approval by TAs."   You can now click "Pending Tests" and approve it.
+
+2. Submit a solution to run against the test suite you just craeted.  Select "Solutions" on the left and and select "Submit a program."
+
+You may not know what a solution for AE looks like. That's fine.  Since you're logged in as a TA, if you click on "Solution," you'll see the "gold solution" that filters student-submitted tests.  (There are no newlines in the sample, sorry.)  You can simply submit this.
+
+Furiously click on the refresh button until it says "All tests passed."
+
+More Information
+----------------
+
+There are three executables in the package I sent.  You can run them with the --help flag to get a cryptic usage guide. Of course, you should ask me if anything is unclear.
+
+In particular, You'll want to use the 173tourney-accounts executable to create accounts for students.
+
+For example, to create accounts, I do:
+
+./173tourney-accounts --suffix=@cs.brown.edu --create-accounts student1 student2 ...
+
+That creates the accounts student1@cs.brown.edu, student2@cs.brown.edu, ... with randomly generated passwords.
+
+I then use the same program to email students their usernames and passwords:
+
+./cs173tourney-accounts --suffix=@cs.brown.edu --notify-users student1 student2 ...
+
+Emailing uses /usr/sbin/sendmail.  This may not work on your Mac laptop, but probably will work on your Linux server.

@@ -1,2 +1,8 @@
 /dist
 .DS_Store
+doc/racket.css
+doc/scribble-common.js
+doc/scribble-style.css
+doc/scribble.css
+doc/testfest.html
+*~
