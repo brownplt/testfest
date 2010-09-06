@@ -18,11 +18,10 @@
 (provide init-db!)
 (define (init-db!)
   (exec/ignore db "CREATE TABLE user (id INTEGER PRIMARY KEY, name STRING UNIQUE, enabled INTEGER, password_hash TEXT, admin INTEGER)")
-  (exec/ignore db "CREATE TABLE assignment (id INTEGER PRIMARY KEY, name STRING UNIQUE, enabled INTEGER, test_lang TEXT, solution_lang TEXT, single_test_suite INTEGER, solution STRING, interface STRING)")
+  (exec/ignore db "CREATE TABLE assignment (id INTEGER PRIMARY KEY, name STRING UNIQUE, enabled INTEGER, kind TEXT, single_test_suite INTEGER, solution STRING,)")
 
   (exec/ignore db "CREATE TABLE test_suite (id INTEGER PRIMARY KEY, user_id INTEGER, asgn_name STRING, submission STRING, time INTEGER, status STRING, status_text STRING)")
-  (exec/ignore db "CREATE TABLE solution (id INTEGER PRIMARY KEY, user_id INTEGER, asgn_name STRING, submission STRING, time INTEGER, status STRING, status_text)")
-  (exec/ignore db "CREATE TABLE report (id INTEGER PRIMARY KEY, test_suite_id INTEGER, solution_id INTEGER, assignment_id INTEGER, time INTEGER, output_id STRING, success INTEGER)"))
+  (exec/ignore db "CREATE TABLE solution (id INTEGER PRIMARY KEY, user_id INTEGER, asgn_name STRING, submission STRING, time INTEGER, status STRING, status_text)"))
 
 (define (db->solution vec)
   (match vec
@@ -138,7 +137,7 @@
   (with-handlers
       ([exn:sqlite? (lambda (exn) #f)])
     (let-prepare
-        ([stmt "INSERT INTO assignment (name, enabled, test_lang, solution_lang, single_test_suite, interface, solution) VALUES (?,?,?,?,?,?,?)"])
+        ([stmt "INSERT INTO assignment (name, enabled, kind, single_test_suite, solution) VALUES (?,?,?,?,?)"])
       (with-transaction*
        db
        'exclusive
@@ -146,10 +145,8 @@
          (run stmt 
               (assignment-name a)
               (boolean->db (assignment-enabled? a))
-              (assignment-test-lang a)
-              (assignment-solution-lang a)
+              (assignment-kind a)
               (boolean->db (assignment-single-test-suite? a))
-              (assignment-interface a)
               (assignment-solution a))
          (struct-copy assignment a
                       [id (last-insert-rowid db)]))))))

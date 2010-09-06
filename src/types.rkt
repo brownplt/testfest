@@ -12,9 +12,7 @@
 (struct user (id name [enabled? #:mutable] [password-hash #:mutable] 
                  [admin? #:mutable]) #:transparent)
 
-(struct assignment (id name [enabled? #:mutable]
-                       test-lang solution-lang interface
-                       single-test-suite? [solution #:mutable])
+(struct assignment (id name enabled? kind single-test-suite? solution)
   #:transparent)
 
 (struct test-suite (id user-id asgn-name submission time status status-text))
@@ -39,9 +37,7 @@
    ([id (or/c false? integer?)]
     [name string?]
     [enabled? boolean?]
-    [test-lang string?]
-    [solution-lang string?]
-    [interface string?]
+    [kind string?]
     [single-test-suite? boolean?]
     [solution string?]))
  

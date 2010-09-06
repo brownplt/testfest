@@ -34,13 +34,7 @@
 HERE
   )
 
-(define interface #<<HERE
-(parse calc AE AE? num num? num-n set-num-n! add add? 
-add-lhs add-rhs set-add-lhs! set-add-rhs! sub sub? sub-lhs sub-rhs
-set-sub-lhs! set-sub-rhs!)
-HERE
-  )
 
 (define ae
   (new-assignment
-   (assignment #f "ae" #t "plai" "plai" interface #t ae-solution)))
+   (assignment #f "ae" #t "plai" #t ae-solution)))
