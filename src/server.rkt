@@ -50,6 +50,7 @@
 (define (main u req)
   (let ([binds (request-bindings req)])
     (match (request-command req)
+      ['ping (ok #t "pong")]
       ['isadmin (ok #t (user-admin? u))]
       ['assignments (ok #t (map asgn->json (active-asgns)))]
       ['numtests (ok #t (num-tests (extract-binding/single 'id binds)))]
@@ -76,6 +77,17 @@
                        (extract-binding/single 'asgnid binds)
                        (extract-binding/single 'prog binds))
          (ok #t ""))]
+      ['newasgn
+       (begin
+         (new-assignment #f
+                         (extract-binding/single 'asgnid binds)
+                         #f
+                         (extract-binding/single 'kind binds)
+                         (json->jsexpr (extract-binding/single 'singletestsuite binds))
+                         (extract-binding/single 'solution binds))
+         (ok #t "assignment created; refresh the page"))]
+      ['logout 
+       (send/finish (ok #t "" #:k-url "expired"))]
       [cmd (admin-main u cmd binds)])))
 
 (define (admin-main u cmd binds)
@@ -106,7 +118,7 @@
         ['setasgnenabled
          (begin (set-asgn-enabled (extract-binding/single 'id binds)
                                   (json->jsexpr (extract-binding/single 'enable binds)))
-                (ok #t ""))]
+                (ok #t "" ))]
         [_ (ok #f "invalid command")])
       (ok #f "invalid command")))
 

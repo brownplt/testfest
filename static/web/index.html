@@ -633,19 +633,12 @@ function newPLAIAsgn() {
 
   var asgnE = clicks_e(createAsgn).lift_e(function() {
     return {
-      gold: $F(gold),
-      'asgn':
-        Object.toJSON({ name: $F(shortName)
-        , enabled: false
-        , singletestsuite: true
-        , solncmd: cmd
-        , testcmd: cmd
-        , kind: 'plai'
-        })
-    };
-  });
+      solution: $F(gold),
+      asgnid: $F(shortName),
+      singletestsuite: "true",
+      kind: "plai" };});
   
-  var responseE = server_e('/api/newasgn',asgnE);
+  var responseE = server_e(sessionId + '?command=newasgn',asgnE);
   responseE.lift_e(function(r) {
     if (r.success) {
       report(msg,'Assignment created.  Refresh the page to work with it.');
@@ -819,7 +812,7 @@ function assignmentPane(nextE) {
       var content = DIV();
       var opsE = buttons.clickE.lift_e(function(val) {
         if (val == 'Logout') {
-          server_e('/api/logout',one_e({ }));
+          server_e(sessionId + '?command=logout',one_e({ }));
           
           // We don't really care what the server says.
           modal(DIV({className: 'shutdown'}, 

@@ -11,7 +11,7 @@ function isLoggedIn() {
   else {
     var match =  document.cookie.match('session\=\"(.*)\"');
     sessionId = match && match[1];
-    return !!sessionId;
+    return !!sessionId && match[1] !== "expired";
   }
 }
 
