@@ -7,7 +7,6 @@
          "json.rkt"
          "db.rkt"
          "sqlite/sqlite.ss"
-         "sample.rkt"
          "background.rkt")
 
 (define (ok success? jsexpr #:k-url [k-url #f])
@@ -28,7 +27,6 @@
      (list (get-output-bytes port)))))
 
 (define (request-command req)
-  (printf "command: ~s~n" (url-query (request-uri req)))
   (match (url-query (request-uri req))
     [`((command . ,(? string? cmd))) (string->symbol cmd)]
     [_ #f]))
@@ -136,18 +134,28 @@
               (ok #f "login failed")))
         (ok #f "ill-formed request"))))
 
-  
-(define background-thread (thread background-thread-proc))
 
-(serve/servlet
- start
- #:launch-browser? #f
- #:servlet-path "/login"
- #:extra-files-paths '("../static/web")
- #:file-not-found-responder
- (lambda (req)
-   (if (empty? (url-path (request-uri req)))
-       (file-response 200 "OK" "../static/web/index.html")
-       (make-response/basic
-        404 #"File Not Found"
-        (current-seconds) TEXT/HTML-MIME-TYPE empty))))
+
+(let ([port 8080]
+      [db-path "testfest.db"])
+  (command-line
+   #:once-each
+   [("-p" "--port") p "serve on port" (set! port (string->number p))]
+   [("-d" "--db-path") p "testfest.db" (set! db-path p)]
+   #:args ()
+   (set-db! (open (string->path db-path)))
+   (let ([background-thread (thread background-thread-proc)])
+     (serve/servlet
+      start
+      #:port port
+      #:launch-browser? #f
+      #:banner? #f
+      #:servlet-path "/login"
+      #:extra-files-paths '("res")
+      #:file-not-found-responder
+      (lambda (req)
+        (if (empty? (url-path (request-uri req)))
+            (file-response 200 "OK" "../static/web/index.html")
+            (make-response/basic
+             404 #"File Not Found"
+             (current-seconds) TEXT/HTML-MIME-TYPE empty)))))))

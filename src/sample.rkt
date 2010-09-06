@@ -1,9 +1,19 @@
+#!/usr/bin/env racket
 #lang racket
 (require 
  "sqlite/sqlite.rkt"
  "db.rkt")
 
-(define db (open ':memory:))
+(define db-path "testfest.db")
+
+(command-line
+ #:once-each
+ [("-p" "--path") p "store sample at" (set! db-path p)])
+
+(when (file-exists? db-path)
+  (error (format "~a exists; delete it manually if it is safe to do so" db-path)))
+
+(define db (open (string->path db-path)))
 (set-db! db)
 (init-db!)
 
@@ -38,3 +48,6 @@ HERE
 (define ae
   (new-assignment
    (assignment #f "ae" #t "plai" #t ae-solution)))
+
+(close db)
+(printf "Created sample database at ~a. Login as arjun (password: arjun)~n" db-path)
