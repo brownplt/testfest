@@ -52,7 +52,7 @@ function submitTest(asgn) { return function(_ /* event */) {
   var cancelE = clicks_e(cancelButton);
 
 
-  var responseE = server_e('/api/newtest', submitE.lift_e(function(val) { 
+  var responseE = server_e(sessionId + "?command=newtest", submitE.lift_e(function(val) { 
    return { test: $F(testText), assignment: asgn.id } }));
 
  var responseOKE = responseE.filter_e(
@@ -83,7 +83,7 @@ function submitProg(asgn) { return function(_ /* event */) {
   var cancelE = clicks_e(cancelButton);
 
 
-  var responseE = server_e('/api/newprog', submitE.lift_e(function(val) { 
+  var responseE = server_e(sessionId + '?command=newprog', submitE.lift_e(function(val) { 
     return { prog: $F(testText), asgnid: asgn.id } } ));
 
  var responseOKE = responseE.filter_e(
@@ -100,38 +100,39 @@ function submitProg(asgn) { return function(_ /* event */) {
 
 // Formats a test that you submitted.
 function formatTestInfo(ti) {
-  
+  console.log(ti);
   var time = new Date(); time.setTime(ti.time * 1000);
 
-  var status = ti.status.stat;
+  var status = ti.status;
 
-  if (status == 'Submitted') {
+  if (status == 'submitted') {
     return DIV(time.formatRelative()," test suite is being processed");
   }
-  else if (status == 'TACheckOK') {
+  else if (status == 'ta-ok') {
     return DIV(time.formatRelative(), " test suite accepted");
   }
-  else if (status == 'MachineCheckOK') {
+  else if (status == 'machine-ok') {
     return DIV(time.formatRelative()," pending approval by TAs");
   }
-  else if (status == 'MachineCheckError' || status == 'TACheckError') {
+  else if (status == 'machine-error' || status == 'ta-error') {
     var moreInfo = LINK("More information");
     var isHidden = true;
-    var infoPane = PRE({style: { display: 'none'}}, ti.status.message);
+    var infoPane = PRE({style: { display: 'none'}}, ti.status_text);
     clicks_e(moreInfo).lift_e(function(_) {
       infoPane.setStyle({ display: isHidden ? 'block' : 'none'});
       div.setStyle({ border: isHidden ? '1px solid black' : ''});
       isHidden = !isHidden;
     });
-    var div = DIV(time.formatRelative()," test suite raised an error or "
-                 + " was not accepted by the TAs",
+    var div = DIV(time.formatRelative(),
+                  (status === 'ta-error') ? 'TAs did not accept the test suite'
+                  : 'test suite raised an error',
       SPAN({className: 'small'},moreInfo),infoPane);
     return div;
   }
-  else if (status == 'Superseded') {
+  else if (status == 'superseded') {
     return DIV(time.formatRelative()," test suite superseded");
   }
-  else if (status == 'Retracted') {
+  else if (status == 'retracted') {
     return DIV(time.formatRelative(), " unknown error");
   }
 };
@@ -149,13 +150,13 @@ function formatSubmission(ti) {
 
   var time = new Date(); time.setTime(ti.time * 1000);
 
-  if (ti.status === true) {
+  if (ti.status === "ok") {
     return DIV(time.formatRelative(),": all tests passed");
   }
-  else if (typeof ti.status == 'string') {
+  else if (ti.status === "error") {
     var moreInfo = LINK("More information");
     var isHidden = true;
-    var infoPane = PRE({style: { display: 'none'}}, ti.status);
+    var infoPane = PRE({style: { display: 'none'}}, ti.status_text);
     clicks_e(moreInfo).lift_e(function(_) {
       infoPane.setStyle({ display: isHidden ? 'block' : 'none'});
       div.setStyle({ border: isHidden ? '1px solid black' : ''});
@@ -165,7 +166,7 @@ function formatSubmission(ti) {
       SPAN({className: 'small'},moreInfo),infoPane);
     return div;
   }
-  else if (ti.status === false) {
+  else if (ti.status === "pending") {
     return DIV(time.formatRelative(),": submission is being processed");
   }
   else {
@@ -175,7 +176,7 @@ function formatSubmission(ti) {
 
 // Query for submitted programs when requestE fires.
 function querySubmissions(destElem,asgn,requestE) {
-  var responseE = server_e('/api/programs',
+  var responseE = server_e(sessionId + "?command=programs",
     requestE.constant_e({ asgnid: asgn.id }));
 
   var submissionsE = responseE.filter_e(isSuccess)
@@ -199,7 +200,7 @@ function querySubmissions(destElem,asgn,requestE) {
 // Info on test suites you've submittted.
 function queryTestSuites(destElem,asgn,requestE) {
   var responseE =  
-    server_e('/api/testsuites',requestE.constant_e({ asgnid: asgn.id }));
+    server_e(sessionId + "?command=testsuites",requestE.constant_e({ asgnid: asgn.id }));
 
   var testSuitesE = responseE.filter_e(isSuccess)
     .lift_e(function(r) { return r.value; });
@@ -266,7 +267,7 @@ function formatCurrentTest(test,isSingleSuiteAsgn) {
     toggleExpander(codeView,false);
     toggleExpander(rejectPane,false);
     
-    server_e('/api/setteststatus',
+    server_e(sessionId + '?command=setteststatus',
       one_e({ id: test[0]
             , status: Object.toJSON({ stat: 'TACheckOK' })
             , userid: test[1].userid
@@ -280,7 +281,7 @@ function formatCurrentTest(test,isSingleSuiteAsgn) {
 
   var rejectE = clicks_e(rejectConfirmButton);
 
-  server_e('/api/setteststatus',rejectE.lift_e(function() {
+  server_e(sessionId + '?command=setteststatus',rejectE.lift_e(function() {
     buttons.setStyle({ display: 'none'});
     toggleExpander(codeView,false);
     toggleExpander(rejectPane,false);
@@ -312,12 +313,12 @@ function formatCurrentTest(test,isSingleSuiteAsgn) {
 };
 
 function formatPendingTest(test,isSingleSuiteAsgn) {
-  var text = DIV("By " + test[1].userid + ", submitted one " + 
-                 formatTime(test[1].time));
+  var text = DIV("By " + test.userid + ", submitted on " + 
+                 formatTime(test.time));
 
-  var codeDisp = P('Loading code, please wait ...');
+ 
   var codeView = DIV({ className: 'codeBlock', style: { display: 'none'} },
-    codeDisp);
+    test.code);
 
 
   var rejectText = TEXTAREA({rows: '5', cols: '60'},
@@ -345,41 +346,22 @@ function formatPendingTest(test,isSingleSuiteAsgn) {
     toggleExpander(codeView,false);
     toggleExpander(rejectPane,false);
     
-    server_e('/api/setteststatus',
-      one_e({ id: test[0]
-            , status: Object.toJSON({ stat: 'TACheckOK' })
-            , userid: test[1].userid
-            , asgnid: test[1].asgnid
-            , singlesuite: Object.toJSON(isSingleSuiteAsgn)
-            }));
-    
-  });
+    server_e(sessionId + '?command=setteststatus',
+      one_e({ id: test.id, status: 'ta-ok', status_text: "" })) });
 
   clicks_e(reject).lift_e(function() { toggleExpander(rejectPane,true); });
 
   var rejectE = clicks_e(rejectConfirmButton);
 
-  server_e('/api/setteststatus',rejectE.lift_e(function() {
+  server_e(sessionId + '?command=setteststatus',rejectE.lift_e(function() {
     buttons.setStyle({ display: 'none'});
     toggleExpander(codeView,false);
     toggleExpander(rejectPane,false);
     
-    return {id: test[0], 
-            status: Object.toJSON({ stat: 'TACheckError', message: $F(rejectText) })
-            , userid: test[1].userid
-            , asgnid: test[1].asgnid
-            , singlesuite: Object.toJSON(false) // dont disable earlier tests
-    };
+    return {id: test.id, 
+            status: 'ta-error',
+            status_text : $F(rejectText) };
   }));
-
-  
-
-  var responseE = server_e('/api/code',
-    loadCode.once_e().constant_e({id: test[1].body}));
-  var codeE = responseE.filter_e(isSuccess).lift_e(
-    function(v) { return PRE(v.value); });
-
-  insertDomE(codeE,codeDisp);
 
   var div = DIV(text,buttons);
   return div;
@@ -387,7 +369,7 @@ function formatPendingTest(test,isSingleSuiteAsgn) {
 
 function displayPendingTests(destElem,asgn,requestE) {
 
-  var responseE = server_e('/api/pendingapproval',
+  var responseE = server_e(sessionId + '?command=pendingapproval',
     requestE.constant_e({ asgnid: asgn.id }));
 
   var testsE = responseE.filter_e(isSuccess).lift_e(function(r) {
@@ -419,8 +401,8 @@ function pendingTests(asgn) {
 
 function displayCurrentTests(destElem,asgn,requestE) {
 
-  var responseE = server_e('/api/currenttests',
-    requestE.constant_e({ id: asgn.id }));
+  var responseE = server_e(sessionId + '?command=currenttests',
+    requestE.constant_e({ asgnid: asgn.id }));
 
   var testsE = responseE.filter_e(isSuccess).lift_e(function(r) {
     return r.value; });
@@ -487,7 +469,7 @@ function asgnSolution(asgn) {
   return function() {
    report(msg,false);
    result.value = "Retreiving solution, please wait for it to load ...";
-    server_e('/api/getgold', one_e({ id: asgn.id })).lift_e(function(r) {
+    server_e(sessionId + '?command=getgold', one_e({ id: asgn.id })).lift_e(function(r) {
       if (r.success) { gold.value = r.value; }
       else { gold.value = r.value || "server-side error retrieving solution"; }
     });
@@ -542,7 +524,7 @@ function makeSubmissionPanel(asgn) {
         numTests,
         existingSubmissions);
 
-    var numTestsE =  server_e('/api/numtests',
+    var numTestsE =  server_e(sessionId + "?command=numtests",
         merge_e(one_e(true),clicks_e(refreshProgsButton))
        .constant_e({ id: asgn.id }))
     .lift_e(function(r) {
@@ -571,7 +553,7 @@ function makeSubmissionPanel(asgn) {
 function makeAsgnEnable(asgn) {
   var check_e = receiver_e();
 
-  var responseE =  server_e('/api/isasgnenabled',
+  var responseE =  server_e(sessionId + '?command=isasgnenabled',
     check_e.constant_e({id: asgn.id}));
 
   var msg =  DIV({className: 'error'});
@@ -582,7 +564,7 @@ function makeAsgnEnable(asgn) {
   // JSON here.
   var toBool = function(v) { return (v == "on") ? "true" : "false"; };
 
-  server_e('/api/setasgnenabled',clicks_e(doEnable).lift_e(function() {
+  server_e(sessionId + '?command=setasgnenabled',clicks_e(doEnable).lift_e(function() {
     return { id: asgn.id, enable: toBool($F(isEnabled)) };
   })).lift_e(function(r) {
     if (r.success) { report(msg,"Assignment updated. Refresh the page to see \
@@ -904,7 +886,8 @@ function makeSettingsPane() {
 
 function assignmentPane(nextE) {
   var pane = DIV();
-  var asgnE = server_e(isAdmin ? '/api/allasgns' : '/api/assignments',
+  var asgnE = server_e(sessionId + "?command=" + 
+                       (isAdmin ? 'allasgns' : 'assignments'),
                        one_e({ }));
 
 
@@ -1025,9 +1008,9 @@ function loginPane(nextE) {
   var doLogin = function(_) {
     registerButton.setStyle({ display: 'none' });
     forgotButton.setStyle({ display: 'none' });
-    return server_e('/api/login',
+    return server_e('/login',
       one_e({ username: $F(usernameField), password: $F(passwordField) }))
-    .lift_e(function(loginResult) {
+    .lift_e(function(loginResult) { 
       registerButton.setStyle({ display: 'block' });
       forgotButton.setStyle({ display: 'block' });
       if (loginResult.success) {
@@ -1046,8 +1029,9 @@ function loginPane(nextE) {
           clicks_e(loginButton)
           .lift_e(doLogin).switch_e()
           .filtereq_e(true).constant_e(assignmentPane))
-  .lift_e(function(v) {
-    server_e('/api/isadmin',one_e({})).lift_e(function (isAdmin_) {
+  .lift_e(function(v) { 
+    server_e(sessionId + "?command=isadmin",
+             one_e({})).lift_e(function (isAdmin_) {
       isAdmin = isAdmin_.value;
       nextE.sendEvent(v); 
     });
@@ -1125,7 +1109,7 @@ function start() {
   });
 
   if (isLoggedIn()) {
-    server_e('/api/isadmin',one_e({})).lift_e(function (isAdmin_) {
+    server_e(sessionId + "?command=isadmin",one_e({})).lift_e(function (isAdmin_) {
       isAdmin = isAdmin_.value;
       pane_e.sendEvent(assignmentPane);
     });

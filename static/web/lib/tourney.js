@@ -46,7 +46,8 @@ function server_e(url,valueE) {
 
   var onSuccess = function(transport) {
     saveSessionId();
-    response_e.sendEvent(transport.responseText.evalJSON(false));
+    var txt = transport.responseText.evalJSON(false);
+    response_e.sendEvent(txt);
   };
 
   var onFailure = function(transport) {
