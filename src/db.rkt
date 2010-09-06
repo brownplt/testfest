@@ -18,7 +18,7 @@
 (provide init-db!)
 (define (init-db!)
   (exec/ignore db "CREATE TABLE user (id INTEGER PRIMARY KEY, name STRING UNIQUE, enabled INTEGER, password_hash TEXT, admin INTEGER)")
-  (exec/ignore db "CREATE TABLE assignment (id INTEGER PRIMARY KEY, name STRING UNIQUE, enabled INTEGER, kind TEXT, single_test_suite INTEGER, solution STRING,)")
+  (exec/ignore db "CREATE TABLE assignment (id INTEGER PRIMARY KEY, name STRING UNIQUE, enabled INTEGER, kind TEXT, single_test_suite INTEGER, solution STRING)")
 
   (exec/ignore db "CREATE TABLE test_suite (id INTEGER PRIMARY KEY, user_id INTEGER, asgn_name STRING, submission STRING, time INTEGER, status STRING, status_text STRING)")
   (exec/ignore db "CREATE TABLE solution (id INTEGER PRIMARY KEY, user_id INTEGER, asgn_name STRING, submission STRING, time INTEGER, status STRING, status_text)"))
