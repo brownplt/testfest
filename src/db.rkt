@@ -23,6 +23,13 @@
   (exec/ignore db "CREATE TABLE test_suite (id INTEGER PRIMARY KEY, user_id INTEGER, asgn_name STRING, submission STRING, time INTEGER, status STRING, status_text STRING)")
   (exec/ignore db "CREATE TABLE solution (id INTEGER PRIMARY KEY, user_id INTEGER, asgn_name STRING, submission STRING, time INTEGER, status STRING, status_text)"))
 
+(provide/contract (create-password (-> string?)))
+(define (create-password)
+  (list->string 
+   (build-list 
+    20 (lambda (_) (integer->char (+ (random 26) 65))))))
+  
+
 (define (db->solution vec)
   (match vec
     [`#(,(? integer? id) ,(? integer? user-id) ,(? string? asgn-name)
@@ -91,6 +98,11 @@
            #f)]
       [_ #f])))
 
+(provide/contract (change-password (string? string? . -> . any)))
+(define (change-password username password)
+  (let-prepare ([stmt "UPDATE user SET password_hash=? WHERE name=?"])
+    (run stmt username password)))
+
 (provide/contract (all-asgns (-> (listof assignment?))))
 (define (all-asgns)
   (let-prepare ([stmt "SELECT * FROM assignment"])
@@ -115,14 +127,11 @@
     (load-params stmt name)
     (length (step* stmt))))
 
-(provide/contract (new-login (string? string? . -> . boolean?)))
+(provide/contract (new-login (string? string? . -> . any)))
 (define (new-login name password-hash)
-  (with-handlers
-      ([exn:sqlite? (lambda (exn) #f)]) ; UNIQUE violated (dup. user name)
-    (let-prepare 
-        ([stmt "INSERT INTO user (name, enabled, password_hash, admin) VALUES (?,?,?,?)"])
-      (run stmt name (boolean->db #t) password-hash (boolean->db #f))
-      #t)))
+  (let-prepare 
+      ([stmt "INSERT INTO user (name, enabled, password_hash, admin) VALUES (?,?,?,?)"])
+    (run stmt name (boolean->db #t) password-hash (boolean->db #f))))
 
 (provide/contract (set-user-admin! (string? boolean? . -> . any)))
 (define (set-user-admin! user is-admin?)

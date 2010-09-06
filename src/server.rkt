@@ -4,6 +4,7 @@
          web-server/configuration/responders
          web-server/http/request-structs
          net/cookie
+         net/sendmail
          "json.rkt"
          "db.rkt"
          "sqlite/sqlite.ss"
@@ -123,16 +124,28 @@
 
 (define (start req)
   (let ([binds (request-bindings req)])
-    (if (and (exists-binding? 'username binds)
-             (exists-binding? 'password binds))
-        (let ([u (login (extract-binding/single 'username binds)
-                        (extract-binding/single 'password binds))])
-          (if (user? u)
-              (main
-               u
-               (send/suspend (lambda (k-url) (ok #t k-url #:k-url k-url))))
-              (ok #f "login failed")))
-        (ok #f "ill-formed request"))))
+    (cond
+      [(and (exists-binding? 'username binds)
+            (exists-binding? 'password binds))
+       (let ([u (login (extract-binding/single 'username binds)
+                       (extract-binding/single 'password binds))])
+         (if (user? u)
+             (main
+              u
+              (send/suspend (lambda (k-url) (ok #t k-url #:k-url k-url))))
+             (ok #f "login failed")))]
+      [(exists-binding? 'forgot binds) 
+       (let ([username (extract-binding/single 'forgot binds)]
+             [password (create-password)])
+         (change-password username password)
+         (let ([msg-port
+                (send-mail-message/port "arjun@cs.brown.edu" "[TestFest] password changed"
+                                        (list username) empty empty)])
+           (fprintf 
+            msg-port "Your new password is ~a" password))
+         (ok #t "new password sent; check your email"))]
+      [else (ok #f "ill-formed request")])))
+      
 
 
 
@@ -144,6 +157,7 @@
    [("-d" "--db-path") p "testfest.db" (set! db-path p)]
    #:args ()
    (set-db! (open (string->path db-path)))
+   (printf "http://localhost:~a/~n" port)
    (let ([background-thread (thread background-thread-proc)])
      (serve/servlet
       start

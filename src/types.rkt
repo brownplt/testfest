@@ -1,8 +1,8 @@
 #lang racket
 
 (define (test-suite-status? sym)
-  (and (memq sym '(submitted machine-ok machine-error ta-ok ta-error 
-                             superseded retracted))
+  (and (memq sym 
+             '(submitted machine-ok machine-error ta-ok ta-error superseded))
        #t))
 
 (define (solution-status? sym)
@@ -18,9 +18,6 @@
 (struct test-suite (id user-id asgn-name submission time status status-text))
 
 (struct solution (id user-id asgn-name submission time status status-text))
-
-(struct report (id test-suite-id solution-id assignment-id time output-id
-                   success?))
 
 (provide test-suite-status? solution-status?)
 

@@ -1,11 +1,14 @@
 <html>
-<!-- Copyright (c) 2007-2008 Arjun Guha.
-     All Rights Reserved.
-  -->
+<!--
+Copyright (c) 2007-2010 Brown University.
+All Rights Reserved.
+
+Written by Arjun Guha.  
+-->
    
 
 <head>
-<title>CSCI1730 Test-Fest</title>
+<title>CSCI1730 TestFest</title>
 <link rel="stylesheet" href="style.css"/>
 <script type="text/javascript" src="fx/flapjax.js"></script>
 <script type="text/javascript" src="lib/prototype.js"></script>
@@ -856,10 +859,10 @@ function forgotPane() {
 
   var reminderSent = true;
 
-  server_e('/api/forgotpassword',
+  server_e('/login',
     clicks_e(remind)
     .filter_e(function() { return !reminderSent; }) // interesting use case
-    .lift_e(function() { return { id: $F(username) }; }))
+    .lift_e(function() { return { forgot: $F(username) }; }))
   .lift_e(function() {
     reminderSent = true;
     report(msg,"We've sent a reminder to " + $F(username) 
