@@ -626,28 +626,21 @@ var SUBTEXT = function(t) { return DIV({className: 'subtext'},t); };
 
 function newPLAIAsgn() {
   var shortName = INPUT({type: 'text'});
-  var longName = INPUT({type: 'text'});
-  var interface = TEXTAREA({ rows: '5', style: { width: '100%'} });
   var gold = TEXTAREA({rows: '10', style: { width: '100%'} });
   var msg =  DIV({className: 'error'});
 
   var createAsgn = LINK('Create Assignment');
 
   var asgnE = clicks_e(createAsgn).lift_e(function() {
-    var cmd = '%p/plai-test.sh "' + $F(interface) + '" %s %t';
     return {
       gold: $F(gold),
       'asgn':
-        Object.toJSON({ id: $F(shortName)
-        , desc: $F(longName)
+        Object.toJSON({ name: $F(shortName)
         , enabled: false
-        , endtime: 0 // we don't do this yet
         , singletestsuite: true
         , solncmd: cmd
         , testcmd: cmd
-        , solnid: "0" // dummy
-        , solnlang: 'plai'
-        , testlang: '' // plai-test.ss doesn't want a language for test suites
+        , kind: 'plai'
         })
     };
   });
@@ -664,22 +657,14 @@ function newPLAIAsgn() {
 
   return DIV({className: 'form'},
     P("Use this page to create an assignment based on #lang plai."),
-    P("Short name: ",shortName,
+    P("Name: ",shortName,
       SUBTEXT("This is the title displayed along the top of the window.")),
-    P("Long name: ",longName,
-      SUBTEXT("This isn't used yet, but you never know.")),
     P("Gold solution: ",DIV(gold),
-      SUBTEXT("This solution must begin with #lang plai.  AND IT MUST BE \
+      SUBTEXT("This solution must MUST BE \
         CORRECT.  Furthermore, even if you've told students to assume that \
         certain kinds of input will never be provided (e.g. invalid input to \
         the parser), this solution must correctly handle such cases so that \
         we can reject submitted tests that violate input assumptions.")),
-    P("Interface: ",DIV(interface),
-      SUBTEXT("A space-separated list of the names that a solution exposes \
-        to a test suite.  For example, a solution to AE (Arithmetic \
-        Interpreter) exposes the following names: parse calc AE AE? num \
-        num? num-n set-num-n! add add?  add-lhs add-rhs set-add-lhs! \
-        set-add-rhs! sub sub? sub-lhs sub-rhs  set-sub-lhs! set-sub-rhs")),
     msg,
     P(createAsgn));
 };
@@ -722,6 +707,7 @@ function newGCAsgn() {
   });
 
   return DIV({className: 'form'},
+    B("Not implemented"),
     P("Use this page to create a GC assignment (plai/collector and \
        plai/mutator."),
     P("Short name: ",shortName,
@@ -738,97 +724,14 @@ function newGCAsgn() {
     P(createAsgn));
 };
 
-function newCustomAsgn() {
-  var shortName = INPUT({type: 'text'});
-  var longName = INPUT({type: 'text'});
-  var singleSuite = INPUT({type: 'checkbox', checked: 'true'});
-  var solnCmd = TEXTAREA({ rows: '5', style: { width: '100%'} });
-  var testCmd = TEXTAREA({ rows: '5', style: { width: '100%'} });
-  var solnLang = INPUT({type: 'text'});
-  var testLang = INPUT({type: 'text'});
-  var gold = TEXTAREA({rows: '10', style: { width: '100%'} });
-  var msg =  DIV({className: 'error'});
-
-  var createAsgn = LINK('Create Assignment');
-
-  var asgnE = clicks_e(createAsgn).lift_e(function() {
-    return {
-      gold: $F(gold),
-      'asgn':
-        Object.toJSON({ id: $F(shortName)
-        , desc: $F(longName)
-        , enabled: false
-        , endtime: 0 // we don't do this yet
-        , singletestsuite: $F(singleSuite)
-        , solncmd: $F(solnCmd)
-        , testcmd: $F(testCmd)
-        , solnid: "0" // dummy
-        , solnlang: $F(solnLang)
-        , testlang: $F(testLang)
-        })
-    };
-  });
-
-  
-  var responseE = server_e('/api/newasgn',asgnE);
-  responseE.lift_e(function(r) {
-    if (r.success) {
-      report(msg,'Assignment created.  Refresh the page to work with it.');
-    }
-    else {
-      report(msg, r.value || 'failed: server-side error');
-    }
-  });
-
-
-  return DIV({className: 'form'},
-    P("Use this page to create a custom assignment.  If your assignment is " +
-      " based on the PLAI software, use the PLAI and GC pages instead."),
-    P("Short name: ",shortName,
-      SUBTEXT("This is the title displayed on the top-most bar.")),
-    P("Full name: ",longName,
-        SUBTEXT("Okay, this isn't really used, but may be in the future.")),
-    P("Gold implementation: ",DIV(gold),
-        SUBTEXT("Include the #lang line in your implementaion.  THIS MUST " +
-          " BE CORRECT!")),
-    P(singleSuite,"Single test suite?",
-      SUBTEXT("If checked, only the latest approved test suite from each " +
-        " group will be used for war-grading.")),
-    P("Solution command:",DIV(solnCmd),
-      SUBTEXT("Shell command to test a submitted solution against a single \
-      test suite.  Use '%s' for the file name of the solution, '%t' for \
-      the file name of the test suite, '%p' for the path to the plai \
-      collection, and '%%' if you really need to enter '%'.  Your shell \
-      command should exit with zero if all tests pass.  If any test fails, \
-      exit with a non-zero error code.  Everything sent to stderr is \
-      reported to the student, only if you exit with a non-zero error code. \
-      On failure, write the number of failed tests to stdout.  You may \
-      write 0.  This is purely for statistics potentially for grading.")),
-    P("Test suite command:",DIV(testCmd),
-      SUBTEXT("Shell command to run a submitted test suite against the gold \
-      solution.  This is probably the same as your solution command \
-      above.  The instructions are the same.")),
-    P("Solution language:",solnLang,
-      SUBTEXT("Example: 'plai' or 'plai/mutator' (without the quotes).  If a \
-      submitted solution omits a #lang or a #reader line, the system will \
-      insert a #lang line with this language.  Leave this field blank if \
-      you don't want anything inserted.")),
-    P("Test suite language:",testLang,
-      SUBTEXT("Same as above, but for test suites.")),
-    msg,
-    P(LINK("Click here to view 23 more optional fields")),
-    P(createAsgn));
-};
-
 function newAsgn() {
 
-  var buttons = buttonBar(['PLAI','GC','Custom'],[],'PLAI');
+  var buttons = buttonBar(['PLAI','GC'],[],'PLAI');
   var content = DIV();
 
   var panes = 
     { 'PLAI': newPLAIAsgn
     , 'GC': newGCAsgn
-    , 'Custom': newCustomAsgn
     };
 
   var result = DIV({className: 'innerPane'},

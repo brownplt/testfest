@@ -74,12 +74,9 @@
 
 (define (db->asgn vec)
   (match vec
-    [`#(,(? integer? id) ,(? string? name) ,(? db-boolean? enabled) 
-                         ,(? string? test-lang) ,(? string? soln-lang)
-                         ,(? db-boolean? single-test-suite?) ,(? string? solution)
-                         ,(? string? interface))
-     (assignment id name (db->boolean enabled) test-lang soln-lang
-                 interface (db->boolean single-test-suite?) solution)]
+    [`#(,(? integer? id) ,(? string? name) ,(? db-boolean? enabled) ,(? string? kind)
+                         ,(? db-boolean? single-test-suite?) ,(? string? solution))
+     (assignment id name (db->boolean enabled) kind (db->boolean single-test-suite?) solution)]
     [_ (error 'db->asgn "unexpected ~s" vec)]))
 
 (provide/contract (login (string? string? . -> . (or/c user? false?))))

@@ -3,13 +3,14 @@
          web-server/servlet-env
          web-server/configuration/responders
          web-server/http/request-structs
+         net/cookie
          "json.rkt"
          "db.rkt"
          "sqlite/sqlite.ss"
          "sample.rkt"
          "background.rkt")
 
-(define (ok success? jsexpr)
+(define (ok success? jsexpr #:k-url [k-url #f])
   (when (not success?)
     (printf "Failed: ~s~n" jsexpr))
   (let ([port (open-output-bytes)])
@@ -20,7 +21,10 @@
      #"OK"
      (current-seconds)
      #"application/json"
-     empty
+     (if k-url
+         (let ([cookie (cookie:add-max-age (set-cookie "session" k-url) 3600)])
+           (list (make-header #"Set-Cookie" (string->bytes/utf-8 (print-cookie cookie)))))
+         empty)
      (list (get-output-bytes port)))))
 
 (define (request-command req)
@@ -116,9 +120,7 @@
           (if (user? u)
               (main
                u
-               (send/suspend
-                (lambda (k-url)
-                  (ok #t k-url))))
+               (send/suspend (lambda (k-url) (ok #t k-url #:k-url k-url))))
               (ok #f "login failed")))
         (ok #f "ill-formed request"))))
 
