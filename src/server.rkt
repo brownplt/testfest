@@ -127,6 +127,7 @@
 
 (serve/servlet
  start
+ #:launch-browser? #f
  #:servlet-path "/login"
  #:extra-files-paths '("../static/web")
  #:file-not-found-responder

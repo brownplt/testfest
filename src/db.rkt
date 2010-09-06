@@ -221,8 +221,13 @@
 (provide/contract 
  (update-test-suite-status (integer? test-suite-status? string? . -> . any)))
 (define (update-test-suite-status uid status status-text)
+  (when (symbol=? status 'ta-ok)
+    (let ([ts (test-suite-by-id uid)])
+      (when (asgn-single-test-suite? (test-suite-asgn-name ts))
+        (let-prepare ([stmt "UPDATE test_suite SET status=\"superseded\", STATUS_text=\"\" WHERE user_id=?"])
+          (run stmt (test-suite-user-id ts))))))
   (let-prepare
-      ([stmt "UPDATE test_suite SET status=?, status_text=? WHERE id=?"])
+       ([stmt "UPDATE test_suite SET status=?, status_text=? WHERE id=?"])
     (run stmt (symbol->string status) status-text uid)))
 
 (provide/contract
@@ -238,6 +243,21 @@
   (let-prepare
       ([stmt "UPDATE solution SET status=?, status_text=? WHERE id=?"])
     (run stmt (symbol->string status) status-text uid)))
+
+(provide/contract (asgn-single-test-suite? (string? . -> . boolean?)))
+(define (asgn-single-test-suite? asgn-name)
+  (let-prepare ([stmt "SELECT single_test_suite FROM assignment WHERE name=?"])
+    (load-params stmt asgn-name)
+    (match (step* stmt)
+      [`(#(,(? db-boolean? v))) (db->boolean v)]
+      [r (error 'asgn-enabled? "unexpected ~a" r)])))
+
+(define (test-suite-by-id uid)
+  (let-prepare ([stmt "SELECT * from test_suite WHERE id=?"])
+    (load-params stmt uid)
+    (match (step* stmt)
+      [`(,vec) (db->test-suite vec)]
+      [r (error 'test-suite-by-id "unexpected ~a" r)])))
 
 (provide/contract (asgn-enabled? (string? . -> . boolean?)))
 (define (asgn-enabled? asgn-name)
