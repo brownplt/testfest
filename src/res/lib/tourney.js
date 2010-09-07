@@ -13,8 +13,10 @@ function isLoggedIn(k) {
     k(false);
   }
   else {
-    new Ajax.Request(sessionId + "/ping",
-                     { onSuccess: function(t) { k(t.responseText === "pong"); },
+    new Ajax.Request(sessionId + "?command=ping",
+                     { onSuccess: function(t) { 
+                       k(t.responseText.evalJSON().value === "pong");
+                     },
                        onFailure: function(_) { k(false); }
                      });
   }
