@@ -20,6 +20,11 @@
           (result->string/port port result)))
     (get-output-string port)))
 
+(define (result->string result)
+  (let ([port (open-output-string)])
+    (result->string/port port result)
+    (get-output-string port)))
+
 (define (check-solution sol)
   (let ([results
          (for/list ([ts (in-list (current-enabled-tests (solution-asgn-name sol)))])
@@ -35,8 +40,8 @@
     (if (all-tests-passed? result)
         (update-test-suite-status (test-suite-id ts) 'machine-ok "")
         (update-test-suite-status (test-suite-id ts) 'machine-error
-                                  (results->string result)))))
-  
+                                  (result->string result)))))
+
 
 (define (background-thread-proc)
   (cond
@@ -73,13 +78,15 @@
          void
          (lambda ()
            (evaluator
-            (with-limits 
-             memory-limit cpu-limit
-             `(begin
-                (require plai/private/command-line)
-                (plai-ignore-exn-strings true)
-                (local ()
-                  (abridged-test-output ,abridged?)
-                  ,@(map syntax->datum (read-program test-suite)))
-                plai-all-test-results))))
+            (with-handlers
+                ([exn? (lambda (exn) (error (exn-message exn)))])
+              (with-limits 
+               memory-limit cpu-limit
+               `(begin
+                  (require plai/private/command-line)
+                  (plai-ignore-exn-strings true)
+                  (local ()
+                    (abridged-test-output ,abridged?)
+                    ,@(map syntax->datum (read-program test-suite)))
+                  plai-all-test-results)))))
          (lambda () (kill-evaluator evaluator)))))))

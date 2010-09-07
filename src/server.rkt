@@ -1,3 +1,4 @@
+#!/usr/bin/env racket
 #lang racket
 (require web-server/servlet
          web-server/servlet-env
@@ -162,6 +163,7 @@
      (serve/servlet
       start
       #:port port
+      #:listen-ip #f
       #:launch-browser? #f
       #:banner? #f
       #:servlet-path "/login"
