@@ -1007,7 +1007,8 @@ function start() {
     $('content').appendChild(currentPane);
   });
 
-  if (isLoggedIn()) {
+  isLoggedIn(function(amI) {
+  if (amI) {
     server_e(sessionId + "?command=isadmin",one_e({})).lift_e(function (isAdmin_) {
       isAdmin = isAdmin_.value;
       pane_e.sendEvent(assignmentPane);
@@ -1016,6 +1017,7 @@ function start() {
   else {
     pane_e.sendEvent(loginPane);
   }
+  });
 };
 
 </script>

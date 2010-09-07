@@ -6,12 +6,17 @@ function saveSessionId() {
   if (match) { sessionId = match[1]; }
 }
 
-function isLoggedIn() {
-  if (sessionId) { return true; }
+function isLoggedIn(k) {
+  var match =  document.cookie.match('session\=\"(.*)\"');
+  sessionId = match && match[1];
+  if (!sessionId || sessionId === "expired") {
+    k(false);
+  }
   else {
-    var match =  document.cookie.match('session\=\"(.*)\"');
-    sessionId = match && match[1];
-    return !!sessionId && match[1] !== "expired";
+    new Ajax.Request(sessionId + "/ping",
+                     { onSuccess: function(t) { k(t.responseText === "pong"); },
+                       onFailure: function(_) { k(false); }
+                     });
   }
 }
 
