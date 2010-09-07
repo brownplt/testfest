@@ -68,7 +68,7 @@
                   #:memory-limit [memory-limit 150]
                   #:cpu-limit [cpu-limit 50])
   (with-handlers
-      ([exn? (lambda (exn) (error (exn-message exn)))])
+      ([exn? (lambda (exn) exn)])
     (parameterize
         ([use-compiled-file-paths null])
       (let ([evaluator (make-module-evaluator 
@@ -78,15 +78,13 @@
          void
          (lambda ()
            (evaluator
-            (with-handlers
-                ([exn? (lambda (exn) (error (exn-message exn)))])
-              (with-limits 
-               memory-limit cpu-limit
-               `(begin
-                  (require plai/private/command-line)
-                  (plai-ignore-exn-strings true)
-                  (local ()
-                    (abridged-test-output ,abridged?)
-                    ,@(map syntax->datum (read-program test-suite)))
-                  plai-all-test-results)))))
+            (with-limits 
+             memory-limit cpu-limit
+             `(begin
+                (require plai/private/command-line)
+                (plai-ignore-exn-strings true)
+                (local ()
+                  (abridged-test-output ,abridged?)
+                  ,@(map syntax->datum (read-program test-suite)))
+                plai-all-test-results))))
          (lambda () (kill-evaluator evaluator)))))))
