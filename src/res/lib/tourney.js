@@ -15,7 +15,12 @@ function isLoggedIn(k) {
   else {
     new Ajax.Request(sessionId + "?command=ping",
                      { onSuccess: function(t) { 
-                       k(t.responseText.evalJSON().value === "pong");
+                       var isPong = false;
+                       try {
+                         isPong = t.responseText.evalJSON().value === "pong";
+                       }
+                       catch(_) { }
+                       k(isPong);
                      },
                        onFailure: function(_) { k(false); }
                      });
