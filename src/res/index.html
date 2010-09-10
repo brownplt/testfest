@@ -461,7 +461,7 @@ function asgnSolution(asgn) {
     msg,
     submit);
 
-  var resultE = server_e('/api/updategold',clicks_e(submit).lift_e(function() { 
+  var resultE = server_e(sessionId + '?command=updategold',clicks_e(submit).lift_e(function() { 
     return { gold: $F(gold), asgnid: asgn.id } }));
 
   resultE.lift_e(function(result) {

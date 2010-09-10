@@ -122,6 +122,12 @@
             (string->symbol (extract-binding/single 'status binds))
             (extract-binding/single 'status_text binds))
            (ok #t ""))]
+        ['updategold
+         (begin
+           (update-gold-solution
+            (extract-binding/single 'asgnid binds)
+            (extract-binding/single 'gold binds))
+           (ok #t "gold solution updated"))]
         ['getgold
          (ok #t (assignment-solution (asgn-by-name (extract-binding/single 'id binds))))]
         ['isasgnenabled

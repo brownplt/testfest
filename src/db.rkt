@@ -198,6 +198,10 @@
          (symbol->string (test-suite-status t))
          (test-suite-status-text t))))
 
+(provide/contract (update-gold-solution (string? string? . -> . any)))
+(define (update-gold-solution asgn-name solution)
+  (let-prepare ([stmt "UPDATE assignment SET solution=? WHERE name=?"])
+    (run stmt solution asgn-name)))
 
 (provide/contract (pending-test-suite (-> (or/c false? test-suite?))))
 (define (pending-test-suite)
