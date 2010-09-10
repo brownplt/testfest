@@ -761,7 +761,7 @@ function makeSettingsPane() {
     }
   });
 
-  var responseE = server_e('/api/changepass',maybeChangeE.filter_e(isTrue));
+  var responseE = server_e(sessionId + '?command=changepass',maybeChangeE.filter_e(isTrue));
 
   responseE.lift_e(function(r) {
     if (r.success) {

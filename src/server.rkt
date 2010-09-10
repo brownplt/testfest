@@ -87,6 +87,14 @@
                          (json->jsexpr (extract-binding/single 'singletestsuite binds))
                          (extract-binding/single 'solution binds))
          (ok #t "assignment created; refresh the page"))]
+      ['changepass
+       (if (string=? (extract-binding/single 'oldpass binds)
+                     (user-password-hash (user-by-id (user-id u))))
+           (begin
+             (change-password (user-name u)
+                              (extract-binding/single 'newpass binds))
+             (ok #t "password successfully changed"))
+           (ok #f "incorrect password"))]
       ['logout 
        (send/finish (ok #t "" #:k-url "expired"))]
       [cmd (admin-main u cmd binds)])))

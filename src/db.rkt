@@ -109,7 +109,7 @@
 (provide/contract (change-password (string? string? . -> . any)))
 (define (change-password username password)
   (let-prepare ([stmt "UPDATE user SET password_hash=? WHERE name=?"])
-    (run stmt username password)))
+    (run stmt password username)))
 
 (provide/contract (all-asgns (-> (listof assignment?))))
 (define (all-asgns)
