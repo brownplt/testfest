@@ -80,12 +80,14 @@
          (ok #t ""))]
       ['newasgn
        (begin
-         (new-assignment #f
-                         (extract-binding/single 'asgnid binds)
-                         #f
-                         (extract-binding/single 'kind binds)
-                         (json->jsexpr (extract-binding/single 'singletestsuite binds))
-                         (extract-binding/single 'solution binds))
+         (new-assignment
+          (assignment 
+           #f
+           (extract-binding/single 'asgnid binds)
+           #f
+           (extract-binding/single 'kind binds)
+           (json->jsexpr (extract-binding/single 'singletestsuite binds))
+           (extract-binding/single 'solution binds)))
          (ok #t "assignment created; refresh the page"))]
       ['changepass
        (if (string=? (extract-binding/single 'oldpass binds)
