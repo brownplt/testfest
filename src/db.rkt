@@ -98,6 +98,14 @@
            #f)]
       [_ #f])))
 
+(provide/contract (user-by-id (integer? . -> . user?)))
+(define (user-by-id id)
+  (let-prepare ([stmt "SELECT * FROM user WHERE id=?"])
+    (load-params stmt id)
+    (match (step* stmt)
+      [`(,(? vector? v)) (db->user v)]
+      [x (error 'user-by-id "unexpected ~s" x)])))
+
 (provide/contract (change-password (string? string? . -> . any)))
 (define (change-password username password)
   (let-prepare ([stmt "UPDATE user SET password_hash=? WHERE name=?"])

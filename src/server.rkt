@@ -9,7 +9,8 @@
          "json.rkt"
          "db.rkt"
          "sqlite/sqlite.ss"
-         "background.rkt")
+         "background.rkt"
+         "log.rkt")
 
 (define (ok success? jsexpr #:k-url [k-url #f])
   (when (not success?)

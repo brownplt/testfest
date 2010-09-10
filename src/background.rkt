@@ -1,7 +1,9 @@
 #lang racket
 (require 
  racket/sandbox
- "db.rkt")
+ net/sendmail
+ "db.rkt"
+ "log.rkt")
 
 (provide background-thread-proc run-test)
 
@@ -25,19 +27,48 @@
     (result->string/port port result)
     (get-output-string port)))
 
+(define ((log-test-suite p) ts)
+  (fprintf p "~n;;; Test suite by ~s~n" (test-suite-user-id ts))
+  (display (test-suite-submission ts) p)
+  (newline p))
+
 (define (check-solution sol)
-  (let ([results
-         (for/list ([ts (in-list (current-enabled-tests (solution-asgn-name sol)))])
-           (run-test (solution-submission sol) (test-suite-submission ts)  #:abridged #t))])
-    (if (andmap all-tests-passed? results)
+  (let* ([all-tests (current-enabled-tests (solution-asgn-name sol))]
+         [results
+          (for/list ([ts (in-list all-tests)])
+            (run-test (solution-submission sol) (test-suite-submission ts)  
+                      #:abridged #t))]
+         [passed? (andmap all-tests-passed? results)])
+    (log
+     (format "~a:~a:~a solution ~a" 
+             (user-name (user-by-id (solution-user-id sol)))
+             (solution-asgn-name sol)
+             (solution-time sol)
+             (if passed? "passed all tests" "failed some tests"))
+     (lambda (p)
+       (display (solution-submission sol) p)
+       (display "\n;;;Test suites follow:\n" p)
+       (for-each (log-test-suite p) all-tests)
+       (newline p)))
+    (if passed?
         (update-solution-status (solution-id sol) 'ok "")
         (update-solution-status (solution-id sol) 'error (results->string results)))))
 
 (define (check-test-suite ts)
-  (let ([result
-         (run-test (assignment-solution (asgn-by-name (test-suite-asgn-name ts)))
-                   (test-suite-submission ts))])
-    (if (all-tests-passed? result)
+  (let* ([result
+          (run-test (assignment-solution (asgn-by-name (test-suite-asgn-name ts)))
+                    (test-suite-submission ts))]
+         [u (user-by-id (test-suite-user-id ts))]
+         [passed? (all-tests-passed? result)])
+    (log (format "~a:~a:~a test suite ~a" 
+                 (user-name u)
+                 (test-suite-asgn-name ts)
+                 (test-suite-time ts)
+                 (if passed? "pending approval" "failed gold"))
+         (lambda (p)
+           (display (test-suite-submission ts) p)
+           (newline p)))
+    (if passed?
         (update-test-suite-status (test-suite-id ts) 'machine-ok "")
         (update-test-suite-status (test-suite-id ts) 'machine-error
                                   (result->string result)))))
