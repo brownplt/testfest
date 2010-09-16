@@ -104,7 +104,10 @@
         ([use-compiled-file-paths null])
       (let ([evaluator (make-module-evaluator 
                         `(module my-module plai
-                           ,@(read-program solution)))])
+                           (require plai/private/command-line)
+                           (disable-tests #t)
+                           ,@(read-program solution)
+                           (disable-tests #f)))])
         (dynamic-wind
          void
          (lambda ()
@@ -112,7 +115,6 @@
             (with-limits 
              memory-limit cpu-limit
              `(begin
-                (require plai/private/command-line)
                 (plai-ignore-exn-strings true)
                 (local ()
                   (abridged-test-output ,abridged?)
