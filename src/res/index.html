@@ -103,7 +103,6 @@ function submitProg(asgn) { return function(_ /* event */) {
 
 // Formats a test that you submitted.
 function formatTestInfo(ti) {
-  console.log(ti);
   var time = new Date(); time.setTime(ti.time * 1000);
 
   var status = ti.status;
@@ -236,92 +235,13 @@ function toggleExpander(elem,show) {
   }
 };
 
-
-function formatCurrentTest(test,isSingleSuiteAsgn) {
-  var text = DIV("By " + test[1].userid + ", submitted on " + 
-                 formatTime(test[1].time));
-
-  var codeDisp = P('Loading code, please wait ...');
-  var codeView = DIV({ className: 'codeBlock', style: { display: 'none'} },
-    codeDisp);
-
-
-  var rejectText = TEXTAREA({rows: '5', cols: '60'},
-    "If you can see this, your TA was too lazy to enter an explanation");
-  var rejectConfirmButton = INPUT({type: 'submit', value: 'Reject'});
-  var rejectPane = DIV({ style: { display: 'none'}},
-    DIV("Enter a short explanation that the student will see"),
-    rejectText,DIV(rejectConfirmButton));
-
-  var code = LINK('View code');
-  var accept = LINK('Accept');
-  var reject = LINK('Reject');
-  var buttons = DIV({className: 'diminuitive'}, code,codeView);
-
-  var codeVisible = false;
-  var loadCode = clicks_e(code);
-  loadCode.lift_e(function(_) {
-    codeVisible = !codeVisible;
-    toggleExpander(codeView,codeVisible);
-  });
-
-  clicks_e(accept).lift_e(function() {
-    buttons.setStyle({ display: 'none'});
-    toggleExpander(codeView,false);
-    toggleExpander(rejectPane,false);
-    
-    server_e(sessionId + '?command=setteststatus',
-      one_e({ id: test[0]
-            , status: Object.toJSON({ stat: 'TACheckOK' })
-            , userid: test[1].userid
-            , asgnid: test[1].asgnid
-            , singlesuite: Object.toJSON(isSingleSuiteAsgn) 
-            }));
-    
-  });
-
-  clicks_e(reject).lift_e(function() { toggleExpander(rejectPane,true); });
-
-  var rejectE = clicks_e(rejectConfirmButton);
-
-  server_e(sessionId + '?command=setteststatus',rejectE.lift_e(function() {
-    buttons.setStyle({ display: 'none'});
-    toggleExpander(codeView,false);
-    toggleExpander(rejectPane,false);
- 
-    var status =
-      Object.toJSON({ stat: 'TACheckError'
-                    , message: $F(rejectText) 
-                    });
-    
-    return { id: test[0],
-             status: status,
-             userid: test[1].userid,
-             asgnid: test[1].asgnid,
-             singlesuite: Object.toJSON(false) // don't disable earlier tests
-          };
-  }));
-
-  
-
-  var responseE = server_e('/api/code',
-    loadCode.once_e().constant_e({id: test[1].body}));
-  var codeE = responseE.filter_e(isSuccess).lift_e(
-    function(v) { return PRE(v.value); });
-
-  insertDomE(codeE,codeDisp);
-
-  var div = DIV(text,buttons);
-  return div;
-};
-
-function formatPendingTest(test,isSingleSuiteAsgn) {
+function formatPendingTest(test,isSingleSuiteAsgn, isCurrent) {
   var text = DIV("By " + test.userid + ", submitted on " + 
                  formatTime(test.time));
 
  
   var codeView = DIV({ className: 'codeBlock', style: { display: 'none'} },
-    test.code);
+    PRE(test.code));
 
 
   var rejectText = TEXTAREA({rows: '5', cols: '60'},
@@ -334,7 +254,8 @@ function formatPendingTest(test,isSingleSuiteAsgn) {
   var code = LINK('View code');
   var accept = LINK('Accept');
   var reject = LINK('Reject');
-  var buttons = DIV({className: 'diminuitive'}, code,accept,reject,codeView,
+  var buttons = DIV({className: 'diminuitive'}, code,
+    (isCurrent ? DIV() : accept), reject, codeView,
     rejectPane);
 
   var codeVisible = false;
@@ -370,9 +291,10 @@ function formatPendingTest(test,isSingleSuiteAsgn) {
   return div;
 }
 
-function displayPendingTests(destElem,asgn,requestE) {
+function displayPendingTests(destElem,asgn,requestE, isCurrent) {
 
-  var responseE = server_e(sessionId + '?command=pendingapproval',
+  var responseE = server_e(sessionId + '?command='
+    + (isCurrent === true ? 'currenttests' : 'pendingapproval'),
     requestE.constant_e({ asgnid: asgn.id }));
 
   var testsE = responseE.filter_e(isSuccess).lift_e(function(r) {
@@ -381,9 +303,9 @@ function displayPendingTests(destElem,asgn,requestE) {
   var divE = testsE.lift_e(function(tests) {
     var elts = [ ];
     tests.each(function(v) { 
-      elts.push(formatPendingTest(v,asgn.singletestsuite)); });
+      elts.push(formatPendingTest(v,asgn.singletestsuite, isCurrent)); });
 
-    if (elts.length == 0) { return DIV('Nothing pending approval.'); }
+    if (elts.length == 0) { return DIV('No Tests.'); }
     else { return DIV.apply(this,alternateBg(elts)); }
   });
 
@@ -402,25 +324,6 @@ function pendingTests(asgn) {
 
 }
 
-function displayCurrentTests(destElem,asgn,requestE) {
-
-  var responseE = server_e(sessionId + '?command=currenttests',
-    requestE.constant_e({ asgnid: asgn.id }));
-
-  var testsE = responseE.filter_e(isSuccess).lift_e(function(r) {
-    return r.value; });
-
-  var divE = testsE.lift_e(function(tests) {
-    var elts = [ ];
-    tests.each(function(v) { 
-      elts.push(formatCurrentTest(v,asgn.singletestsuite)); });
-
-    if (elts.length == 0) { return DIV('Nothing pending approval.'); }
-    else { return DIV.apply(this,alternateBg(elts)); }
-  });
-
-  insertDomE(divE,destElem);
-}
 
 function currentTests(asgn) { 
   
@@ -430,11 +333,11 @@ function currentTests(asgn) {
     P("These tests are the ones that are running against student submissions."),
      refresh,tests);
 
-  displayCurrentTests(tests,asgn,merge_e(clicks_e(refresh),one_e(true)));
+  displayPendingTests(tests, asgn,
+    merge_e(clicks_e(refresh),one_e(true)),
+    true /* current, not pending */);
 
-  return function() {
-    return pane;
-  };
+  return pane;
 };
 
 function asgnSetup(asgn) { return function() {
