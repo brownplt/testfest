@@ -160,7 +160,8 @@
                 (send-mail-message/port "arjun@cs.brown.edu" "[TestFest] password changed"
                                         (list username) empty empty)])
            (fprintf 
-            msg-port "Your new password is ~a" password))
+            msg-port "Your new password is ~a" password)
+           (close-output-port msg-port))
          (ok #t "new password sent; check your email"))]
       [else (ok #f "ill-formed request")])))
       
