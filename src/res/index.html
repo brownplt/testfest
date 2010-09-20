@@ -16,9 +16,8 @@ Written by Arjun Guha.
 
 <script type="text/javascript">
 
-isAdmin = false; // If you set this to true, you will become admin and
-                 // will be able to really screw stuff up.  Please don't
-                 // set it to true.  Thanks -- the management.
+// Affects the UI.  Authentication is handled on the server.
+isAdmin = false;
 
 function clicks_e(elem) {
   return extractEvent_e(elem,'click').constant_e(elem.id || elem);
