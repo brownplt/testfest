@@ -36,7 +36,9 @@
 
 
 (define (asgn->json a)
-  `#hasheq((id . ,(assignment-name a)) (enabled . ,(assignment-enabled? a))))
+  `#hasheq((id . ,(assignment-name a))
+           (enabled . ,(assignment-enabled? a))
+           (singletestsuite . ,(assignment-single-test-suite? a))))
 
 (define (test-suite->json t)
   `#hasheq([userid . ,(user-name (user-by-id (test-suite-user-id t)))]

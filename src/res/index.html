@@ -46,7 +46,11 @@ function submitTest(asgn) { return function(_ /* event */) {
   var content = DIV(DIV(submitButton,cancelButton),
     DIV({ style: { margin: '10px', width: '400px' } },
         "Paste your test suite into the text box below.  Remember not to " +
-        "include your solution, if it is in the same file."),
+        "include your solution, if it is in the same file.  "),
+    DIV({ style: { margin: '10px', width: '400px' } },
+        (asgn.singletestsuite ? 
+           B("Include all your tests.  (We will discard previously submitted " +
+             "tests.)") : DIV())),
     DIV({ style: { margin: '10px', height: '400px', width: '400px' } }, 
         testText));
 
