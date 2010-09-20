@@ -2,7 +2,8 @@
 #lang racket
 (require 
  "sqlite/sqlite.rkt"
- "db.rkt")
+ "db.rkt"
+ "config.rkt")
 
 (define db-path "testfest.db")
 
@@ -17,8 +18,8 @@
 (set-db! db)
 (init-db!)
 
-(define arjun (new-login "arjun" "arjun"))
-(set-user-admin! "arjun" #t)
+(void (new-login email-from-address email-from-address))
+(set-user-admin! email-from-address #t)
 
 (define ae-solution #<<HERE
 (define-type AE 
@@ -50,4 +51,4 @@ HERE
    (assignment #f "ae" #t "plai" #t ae-solution)))
 
 (close db)
-(printf "Created sample database at ~a. Login as arjun (password: arjun)~n" db-path)
+(printf "Created sample database at ~a. Username and password are ~a~n" db-path email-from-address)

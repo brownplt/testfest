@@ -10,7 +10,8 @@
          "db.rkt"
          "sqlite/sqlite.ss"
          "background.rkt"
-         "log.rkt")
+         "log.rkt"
+         "config.rkt")
 
 (define (ok success? jsexpr #:k-url [k-url #f])
   (when (not success?)
@@ -159,7 +160,7 @@
              [password (create-password)])
          (change-password username password)
          (let ([msg-port
-                (send-mail-message/port "arjun@cs.brown.edu" "[TestFest] password changed"
+                (send-mail-message/port email-from-address "[TestFest] password changed"
                                         (list username) empty empty)])
            (fprintf 
             msg-port "Your new password is ~a" password)

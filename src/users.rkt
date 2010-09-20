@@ -3,7 +3,8 @@
 (require
  net/sendmail
  "sqlite/sqlite.rkt"
- "db.rkt")
+ "db.rkt"
+ "config.rkt")
 
 (define db-path "testfest.db")
 
@@ -27,11 +28,11 @@
        (printf "~a:~a~n" username password)
        (when notify?
          (let ([msg-port
-                (send-mail-message/port "arjun@cs.brown.edu" "[TestFest] new account"
+                (send-mail-message/port email-from-address "[TestFest] new account"
                                         (list username) empty empty)])
            (fprintf 
             msg-port
             (string-append
-             "TestFest is accessible at http://cs173.cs.brown.edu\n\n"
+             "TestFest is accessible at " testfest-public-hostname "\n\n"
              "Your username is ~a\n\nYour password is ~a\n") username password)
            (close-output-port msg-port)))))))
