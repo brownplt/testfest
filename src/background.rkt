@@ -82,10 +82,14 @@
   (background-thread-proc))
 
 (provide/contract
- (read-program (path? . -> .(listof syntax?))))
-; read-program : path? -> (listof syntax?)
+ (read-program (string? . -> .(listof syntax?))))
+
 (define (read-program program-string)
-  (let ([port (open-input-string program-string 'submission)])
+  ; Heuristic to remove the #lang line. If the submission uses
+  ; #reader or (module ...), this probably won't work.
+  (let ([port (open-input-string 
+               (regexp-replace #rx"#lang" program-string ";#lang")
+               'submission)])
     (port-count-lines! port) ; and columns!
     (let loop ([val (read-syntax (object-name port) port)])
       (if (eof-object? val)
