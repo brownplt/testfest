@@ -39,7 +39,7 @@
   `#hasheq((id . ,(assignment-name a)) (enabled . ,(assignment-enabled? a))))
 
 (define (test-suite->json t)
-  `#hasheq([userid . ,(test-suite-user-id t)]
+  `#hasheq([userid . ,(user-name (user-by-id (test-suite-user-id t)))]
            [id . ,(test-suite-id t)]
            [asgnid . ,(test-suite-asgn-name t)]
            [code . ,(test-suite-submission t)]
