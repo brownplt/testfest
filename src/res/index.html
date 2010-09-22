@@ -502,7 +502,7 @@ function makeAsgnEnable(asgn) {
 };
 
 function makeAssignmentPanel(asgn) {
-  var panels = { 'Test Suites' : makeTestPanel(asgn)
+  var panels = { 'Test Suite' : makeTestPanel(asgn)
                , 'Solutions' : makeSubmissionPanel(asgn) };
   
 
@@ -514,18 +514,18 @@ function makeAssignmentPanel(asgn) {
     panels['Enable/Disable'] = makeAsgnEnable(asgn);
   }
   
-  var buttons = buttonBar(['Test Suites','Solutions'],
+  var buttons = buttonBar(['Test Suite','Solutions'],
     isAdmin ? ['Pending Tests', 'Current Tests', 'Setup','Solution', 
                'Enable/Disable' ] 
             : false,
-    'Test Suites');
+    'Test Suite');
 
   var content = DIV();
   var result = DIV({className: 'innerPane'},
     DIV({className: 'title'},buttons.elem),
     content);
 
-  insertDomB(panelB(buttons.clickE,panels,panels['Test Suites']()),content);
+  insertDomB(panelB(buttons.clickE,panels,panels['Test Suite']()),content);
 
 
   return result;
@@ -789,7 +789,6 @@ function loginPane(nextE) {
   var usernameField = INPUT({type: 'text', name: 'username'});
   var passwordField = INPUT({type: 'password', name: 'password'});
   var loginButton = INPUT({type: 'submit', value: 'Login'});
-  var registerButton = LINK('Register');
   var forgotButton = LINK('Forgot Password');
   
   var pane = 
@@ -803,8 +802,7 @@ function loginPane(nextE) {
               TR(TD('Username: '), TD(usernameField)),
               TR(TD('Password: '), TD(passwordField))),
         P(loginButton),
-        DIV({className: 'diminutive'},
-          /* registerButton, */ forgotButton)))));
+        DIV({className: 'diminutive'}, forgotButton)))));
 
   one_e(false).lift_e(function() { usernameField.focus(); });
 
@@ -830,8 +828,7 @@ function loginPane(nextE) {
     });
   };
   
-  merge_e(clicks_e(registerButton).constant_e(registerPane),
-          clicks_e(loginButton)
+  merge_e(clicks_e(loginButton)
           .lift_e(doLogin).switch_e()
           .filtereq_e(true).constant_e(assignmentPane))
   .lift_e(function(v) { 
@@ -841,56 +838,6 @@ function loginPane(nextE) {
       nextE.sendEvent(v); 
     });
   });
-
-  return pane;
-};
-
-function registerPane(nextE) {
-  var message = DIV({className: 'error'},'');
-  var emailField = INPUT({type: 'text'});
-  var passwordField = INPUT({type: 'password'});
-  var passwordField2 = INPUT({type: 'password'});
-  var registerButton = INPUT({type: 'button', value: 'Register'});
-  var loginButton = LINK('Login');
-  
-  var pane = DIV({className: 'pane'},
-    DIV({className: 'title'},'Register'),
-    P('You may register with your @cs.brown.edu email address.'),
-    message,
-    FORM({action: 'javascript:undefined'},
-      P('Email address:',emailField),
-      P('Password:',passwordField),
-      P('Re-enter Password:',passwordField2),
-      P(registerButton)),
-    DIV({className: 'diminuitive'},
-      P('Return to the ',loginButton, ' screen')));
-
-  var doRegister = function(_) {
-    if ($F(passwordField) !== $F(passwordField2)) {
-      report(message,'The passwords you entered do not match.');
-      return false;
-    }
-    loginButton.setStyle({display: 'none'});
-    report(message, 'Sending registration ...');
-    return server_e('/api/newuser',one_e(
-      { username: $F(emailField),
-        password: $F(passwordField) }))
-    .lift_e(function(registerResult) {
-      loginButton.setStyle({display: 'block'});
-      if (registerResult.success) {
-        report(message, 'Registration complete');
-      }
-      else {
-        report(message, 
-          egisterResult.value || 'registration failure: server error');
-      }
-      return false;
-    });
-  };
-  
-  merge_e(clicks_e(loginButton).constant_e(loginPane),
-          clicks_e(registerButton).lift_e(doRegister).filtereq_e(true))
-  .lift_e(function(v) { nextE.sendEvent(v); });
 
   return pane;
 };
