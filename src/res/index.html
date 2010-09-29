@@ -809,12 +809,10 @@ function loginPane(nextE) {
   clicks_e(forgotButton).lift_e(forgotPane());
   
   var doLogin = function(_) {
-    registerButton.setStyle({ display: 'none' });
     forgotButton.setStyle({ display: 'none' });
     return server_e('/login',
       one_e({ username: $F(usernameField), password: $F(passwordField) }))
     .lift_e(function(loginResult) { 
-      registerButton.setStyle({ display: 'block' });
       forgotButton.setStyle({ display: 'block' });
       if (loginResult.success) {
         sessionId = loginResult.value;
