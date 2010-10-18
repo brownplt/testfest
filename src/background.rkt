@@ -84,7 +84,7 @@
 (provide/contract
  (read-program (string? . -> .(listof syntax?))))
 
-(define (read-program program-string)
+(define (read-program program-string #:read-syntax [read-syntax? #t])
   ; Heuristic to remove the #lang line. If the submission uses
   ; #reader or (module ...), this probably won't work.
   (let ([port (open-input-string 
@@ -96,8 +96,76 @@
           (begin
             (close-input-port port)
             empty)
-          (cons val (loop (read-syntax (object-name port) port)))))))
+          (cons val (loop (if read-syntax? 
+                              (read-syntax (object-name port) port)
+                              (read port))))))))
 
+; Mutators should begin with (allocator-setup filename heap-size).  Replace this
+; with (allocator-setup ,collector.rkt ,(+ heap-size 10).  If 
+; mutator-sexp is malformed, ignore the error and return mutator-sexp.  Running 
+; the mutator will signal /some/ error.
+(define (use-my-collector collector.rkt mutator-sexp)
+  (if (empty? (rest mutator-sexp))
+      mutator-sexp
+      (match (syntax->datum (first mutator-sexp))
+        [`(allocator-setup ,_ ,heap)
+         (cons `(allocator-setup ,collector.rkt ,(+ heap 10))
+               (rest mutator-sexp))]
+        [else mutator-sexp])))
+
+
+(define (write-module! path lang src)
+  (with-output-to-file
+    path
+    (lambda ()
+      (display (format "#lang ~a~n" lang))
+      (if (string? src)
+          (display src)
+          (for ([exp (in-list src)])
+            (if (syntax? exp)
+                (write (syntax->datum exp))
+                (write exp))
+            (newline))))))
+
+(provide run-gc-test)
+(define (run-gc-test collector mutator
+                     #:memory-limit [memory-limit 150]
+                     #:cpu-limit [cpu-limit 50])
+  (let* ([tmp-dir (path->string (make-temporary-file "testfest~a" 'directory))]
+         [collector.rkt (build-path tmp-dir "collector.rkt")]
+         [mutator.rkt (build-path tmp-dir "mutator.rkt")])
+    (dynamic-wind
+     void
+     (lambda ()
+       (write-module! collector.rkt 'plai/collector (read-program collector))
+       (write-module! mutator.rkt 'plai/mutator
+                      (use-my-collector "collector.rkt" (read-program mutator)))
+       (parameterize ([current-directory tmp-dir]
+                      [sandbox-path-permissions `((read ,tmp-dir))])
+          (let ([evaluator (make-evaluator
+                            'plai
+                            #:requires 
+                            '(plai/test-harness plai/private/gc-core))])
+            (dynamic-wind
+             void
+             (lambda ()
+               (with-handlers
+                   ([exn? (lambda (exn) (evaluator '(heap-as-string)))])
+                 (evaluator
+                  (with-limits 
+                   memory-limit cpu-limit
+                   `(begin
+                      (require "mutator.rkt")
+                      'mutator-ran-successfully; s(heap-as-string)
+                      )))))
+               (lambda () (kill-evaluator evaluator))))))
+     ; finally
+     (lambda ()
+       (delete-file collector.rkt)
+       (delete-file mutator.rkt)
+       (delete-directory tmp-dir)))))
+
+; run-test : string string bool nat nat -> s-exp
 (define (run-test solution test-suite
                   #:abridged [abridged? #f]
                   #:memory-limit [memory-limit 150]
@@ -118,8 +186,8 @@
            memory-limit cpu-limit
            `(begin
               (plai-ignore-exn-strings true)
-                (local ()
-                  (abridged-test-output ,abridged?)
-                  ,@(map syntax->datum (read-program test-suite)))
-                plai-all-test-results))))
+              (local ()
+                (abridged-test-output ,abridged?)
+                ,@(map syntax->datum (read-program test-suite)))
+              plai-all-test-results))))
        (lambda () (kill-evaluator evaluator))))))
