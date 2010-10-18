@@ -144,7 +144,7 @@
                               (read port))))))))
 
 ; Mutators should begin with (allocator-setup filename heap-size).  Replace this
-; with (allocator-setup ,collector.rkt ,(+ heap-size 25).  If 
+; with (allocator-setup ,collector.rkt ,(+ heap-size 20).  If 
 ; mutator-sexp is malformed, ignore the error and return mutator-sexp.  Running 
 ; the mutator will signal /some/ error.
 (define (use-my-collector collector.rkt mutator-sexp)
@@ -152,7 +152,7 @@
       mutator-sexp
       (match (syntax->datum (first mutator-sexp))
         [`(allocator-setup ,_ ,heap)
-         (cons `(allocator-setup ,collector.rkt ,(+ heap 25))
+         (cons `(allocator-setup ,collector.rkt ,(+ heap 20))
                (rest mutator-sexp))]
         [else mutator-sexp])))
 
