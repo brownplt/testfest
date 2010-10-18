@@ -582,7 +582,7 @@ function newGCAsgn() {
   var asgnE = clicks_e(createAsgn).lift_e(function() {
     var cmd = '%p/gc-test.ss -ar  %s %t';
     return {
-      gold: $F(gold),
+      solution: $F(gold),
       asgnid: $F(name),
       singletestsuite: false,
       kind: "gc"
@@ -601,7 +601,7 @@ function newGCAsgn() {
   return DIV({className: 'form'},
     P("Use this page to create a GC assignment (plai/collector and \
        plai/mutator)."),
-    P("M=Name: ",name,
+    P("Name: ",name,
       SUBTEXT("This is the title displayed along the top of the window.")),
     P("Gold solution: ",DIV(gold),
       SUBTEXT("This solution must begin with #lang plai/collector.  AND IT \
