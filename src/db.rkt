@@ -106,10 +106,11 @@
       [`(,(? vector? v)) (db->user v)]
       [x (error 'user-by-id "unexpected ~s" x)])))
 
-(provide/contract (change-password (string? string? . -> . any)))
+(provide/contract (change-password (string? string? . -> . boolean?)))
 (define (change-password username password)
   (let-prepare ([stmt "UPDATE user SET password_hash=? WHERE name=?"])
-    (run stmt password username)))
+    (run stmt password username)
+    (not (zero? (changes-count db)))))
 
 (provide/contract (all-asgns (-> (listof assignment?))))
 (define (all-asgns)

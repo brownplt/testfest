@@ -158,13 +158,13 @@
       [(exists-binding? 'forgot binds) 
        (let ([username (extract-binding/single 'forgot binds)]
              [password (create-password)])
-         (change-password username password)
-         (let ([msg-port
-                (send-mail-message/port email-from-address "[TestFest] password changed"
-                                        (list username) empty empty)])
-           (fprintf 
-            msg-port "Your new password is ~a" password)
-           (close-output-port msg-port))
+         (when (change-password username password)
+           (let ([msg-port
+                  (send-mail-message/port email-from-address "[TestFest] password changed"
+                                          (list username) empty empty)])
+             (fprintf 
+              msg-port "Your new password is ~a" password)
+             (close-output-port msg-port)))
          (ok #t "new password sent; check your email"))]
       [else (ok #f "ill-formed request")])))
       
