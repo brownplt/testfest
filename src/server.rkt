@@ -19,7 +19,7 @@
   (let ([port (open-output-bytes)])
     (parameterize ([current-output-port port])
       (write-json `#hasheq([success . ,success?] [value . ,jsexpr])))
-    (make-response/full
+    (response/full
      200
      #"OK"
      (current-seconds)
@@ -193,6 +193,6 @@
       (lambda (req)
         (if (empty? (url-path (request-uri req)))
             (file-response 200 "OK" "../static/web/index.html")
-            (make-response/basic
+            (response/full
              404 #"File Not Found"
-             (current-seconds) TEXT/HTML-MIME-TYPE empty)))))))
+             (current-seconds) TEXT/HTML-MIME-TYPE empty '(#""))))))))
