@@ -224,22 +224,23 @@
                   #:cpu-limit [cpu-limit 50])
   (with-handlers
       ([exn? (lambda (exn) exn)])
-    (let ([evaluator (make-module-evaluator 
-                      `(module my-module plai
-                         (require plai/private/command-line)
-                         (disable-tests #t)
-                         ,@(read-program solution)
-                         (disable-tests #f)))])
-      (dynamic-wind
-       void
-       (lambda ()
-         (evaluator
-          (with-limits 
-           memory-limit cpu-limit
-           `(begin
-              (plai-ignore-exn-strings true)
-              (local ()
-                (abridged-test-output ,abridged?)
-                ,@(map syntax->datum (read-program test-suite)))
-              plai-all-test-results))))
-       (lambda () (kill-evaluator evaluator))))))
+    (parameterize ([sandbox-path-permissions `((exists "/"))])
+      (let ([evaluator (make-module-evaluator 
+                        `(module my-module plai
+                           (require plai/private/command-line)
+                           (disable-tests #t)
+                           ,@(read-program solution)
+                           (disable-tests #f)))])
+        (dynamic-wind
+         void
+         (lambda ()
+           (evaluator
+            (with-limits 
+             memory-limit cpu-limit
+             `(begin
+                (plai-ignore-exn-strings true)
+                (local ()
+                  (abridged-test-output ,abridged?)
+                  ,@(map syntax->datum (read-program test-suite)))
+                plai-all-test-results))))
+         (lambda () (kill-evaluator evaluator)))))))
