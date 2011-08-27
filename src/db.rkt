@@ -30,14 +30,19 @@
     20 (lambda (_) (integer->char (+ (random 26) 65))))))
   
 
+(define (to-string s)
+  (if (string? s)
+      s
+      (format "~s" s)))
+
 (define (db->solution vec)
   (match vec
     [`#(,(? integer? id) ,(? integer? user-id) ,(? string? asgn-name)
-                         ,(? string? submission) ,(? integer? time) 
+                         ,submission ,(? integer? time) 
                          ,(? string? status) ,(? string? status-text))
      (solution
       id user-id asgn-name
-      submission
+      (to-string submission)
       time
       (string->symbol status)
       status-text)]
@@ -170,9 +175,11 @@
 (define (db->test-suite vec)
   (match vec
     [`#(,(? integer? id) ,(? integer? user-id) ,(? string? asgn-name) 
-                         ,(? string? submission) ,(? integer? time) 
+                         ,submission ,(? integer? time) 
                          ,(? string? status) ,(? string? status-text))
-     (test-suite id user-id asgn-name submission time 
+     (test-suite id user-id asgn-name
+                 (to-string submission)
+                 time 
                  (string->symbol status) status-text)]
     [_ #f]))
 
