@@ -571,6 +571,41 @@ function newPLAIAsgn() {
     P(createAsgn));
 };
 
+function newShellAsgn() {
+  var shortName = INPUT({type: 'text'});
+  var goldUser = INPUT({ type: 'text' });
+  var msg =  DIV({className: 'error'});
+
+  var createAsgn = LINK('Create Assignment');
+
+  var asgnE = clicks_e(createAsgn).lift_e(function() {
+    return {
+      solution: $F(goldUser),
+      asgnid: $F(shortName),
+      singletestsuite: "true",
+      kind: "shell" };});
+  
+  var responseE = server_e(sessionId + '?command=newasgn',asgnE);
+  responseE.lift_e(function(r) {
+    if (r.success) {
+      report(msg,'Assignment created.  Refresh the page to work with it.');
+    }
+    else {
+      report(msg, r.value || 'failed: server-side error');
+    }
+  });
+
+  return DIV({className: 'form'},
+    P("Use this page to create an assignment based on a shell script"),
+    P("Name: ",shortName,
+      SUBTEXT("This is the title displayed along the top of the window.")),
+    P("Gold solution user: ",DIV(goldUser),
+      SUBTEXT("This is the username of a TA who submits perfect solutions. \
+               How you get so good?")),
+    msg,
+    P(createAsgn));
+};
+
 function newGCAsgn() {
   var name = INPUT({type: 'text'});
 
@@ -612,12 +647,13 @@ function newGCAsgn() {
 
 function newAsgn() {
 
-  var buttons = buttonBar(['PLAI','GC'],[],'PLAI');
+  var buttons = buttonBar(['PLAI','GC', 'Shell'],[],'PLAI');
   var content = DIV();
 
   var panes = 
     { 'PLAI': newPLAIAsgn
     , 'GC': newGCAsgn
+    , 'Shell': newShellAsgn
     };
 
   var result = DIV({className: 'innerPane'},

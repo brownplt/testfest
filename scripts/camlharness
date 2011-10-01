@@ -1,0 +1,15 @@
+#!/bin/bash
+echo "*** Running camlharness ***"
+echo -n "Args are: "
+echo $@
+cd $1
+echo "Current directory: `pwd`"
+echo "Files are:"
+ls
+for f in `ls`; do
+  echo -e "\n\nContents of $f:\n\n"
+  cat $f
+done
+
+echo "*** Exit code 0 indicates all tests passed ***"
+exit 0

@@ -34,9 +34,44 @@
   (display (test-suite-submission ts) p)
   (newline p))
 
+;;; solution : solution to test.
+(define (run-shell-test solution-to-test test-string)
+  (let* (; The latest solution to each assignment by (SOLUTION-USER-ID SOLUTION) that is marked 'OK,
+         ; except for (SOLUTION-ASGN-NAME SOLUTION) itself.
+         [other-solutions
+          (filter 
+           (lambda (sol) (not (string=? (solution-asgn-name sol) (solution-asgn-name solution-to-test))))
+           (apply append
+                  (map (lambda (asgn)
+                         (latest-ok-solution-by-user-id (solution-user-id solution-to-test)
+                                                        (assignment-name asgn)))
+                       (all-asgns))))]
+         [tmp-dir (path->string (make-temporary-file "testfest~a" 'directory))]
+         [tmp-filenames 
+          (map (lambda (sol) (build-path tmp-dir (solution-asgn-name sol)))
+               (cons solution-to-test other-solutions))]
+         [tmp-test-filename (build-path tmp-dir "thetestcase.ml")])
+    (dynamic-wind    
+     void
+     (lambda ()
+       (for ([tmp-filename (in-list tmp-filenames)]
+             [solution (in-list (cons solution-to-test other-solutions))])
+         (with-output-to-file tmp-filename (lambda () (display (solution-submission solution)))))
+       (with-output-to-file tmp-test-filename (lambda () (display test-string)))
+       (= 0 (system*/exit-code "/Users/arjun/Research/testfest/scripts/camlharness" 
+                              tmp-dir 
+                              (solution-asgn-name solution-to-test))))
+     ; FINALLY
+     (lambda ()
+       (for ([filename (in-list (cons tmp-test-filename tmp-filenames))])
+         (when (file-exists? filename)
+           (delete-file filename)))
+       (delete-directory tmp-dir)))))
+
 (define (check-solution sol)
   (let* ([all-tests (current-enabled-tests (solution-asgn-name sol))]
-         [asgn-kind (assignment-kind (asgn-by-name (solution-asgn-name sol)))]
+         [asgn (asgn-by-name (solution-asgn-name sol))]
+         [asgn-kind (assignment-kind asgn)]
          [results
           (for/list ([ts (in-list all-tests)])
             (match asgn-kind
@@ -45,11 +80,18 @@
                                 #:abridged #t)]
               ["gc" (run-gc-test (solution-submission sol)
                                  (test-suite-submission ts))]
+              ["shell" 
+               (if (string=? (assignment-solution asgn)
+                             (user-name (user-by-id (solution-user-id sol))))
+                   ; assume the TA solution is perfect
+                   #t
+                   (run-shell-test sol (test-suite-submission ts)))]
               [unk (format "unknown assignment kind ~a" unk)]))]
          [passed? 
           (match asgn-kind
             ["plai" (andmap all-tests-passed? results)]
             ["gc" (andmap (lambda (x) (eq? x 'success)) results)]
+            ["shell" (andmap (lambda (x) (not (false? x))) results)]
             [unk (format "unknown assignment kind ~a" unk)])])
     (log
      (format "~a:~a:~a solution ~a" 
@@ -66,6 +108,32 @@
         (update-solution-status (solution-id sol) 'ok "")
         (update-solution-status (solution-id sol) 'error (results->string results)))))
 
+(define (check-shell-test-suite ts)
+  (let* ([passed?
+          (run-shell-test 
+           ; i.e., the solution to the assignment is the name of a user who has
+           ; submitted the "perfect solution": probably a TA.
+           (first
+            (latest-ok-solution-by-user-id
+            (user-id
+             (user-by-name
+              (assignment-solution (asgn-by-name (test-suite-asgn-name ts)))))
+            (test-suite-asgn-name ts)))
+           (test-suite-submission ts))]
+         [u (user-by-id (test-suite-user-id ts))])
+    (log (format "~a:~a:~a test suite ~a" 
+                 (user-name u)
+                 (test-suite-asgn-name ts)
+                 (test-suite-time ts)
+                 (if passed? "pending approval" "failed gold"))
+         (lambda (p)
+           (display (test-suite-submission ts) p)
+           (newline p)))
+    (if passed?
+        (update-test-suite-status (test-suite-id ts) 'machine-ok "")
+        (update-test-suite-status (test-suite-id ts) 'machine-error
+                                  (result->string passed?)))))
+  
 (define (check-test-suite ts)
   (let* ([result
           (run-test (assignment-solution (asgn-by-name (test-suite-asgn-name ts)))
@@ -117,6 +185,7 @@
        (match (assignment-kind (asgn-by-name (test-suite-asgn-name ts)))
          ["plai" (check-test-suite ts)]
          ["gc" (check-test-suite/gc ts)]
+         ["shell" (check-shell-test-suite ts)]
          [unk (update-test-suite-status 
                (test-suite-id ts) 'machine-error
                (format "unknown assignment kind: ~a" unk))])

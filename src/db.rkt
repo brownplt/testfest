@@ -111,6 +111,15 @@
       [`(,(? vector? v)) (db->user v)]
       [x (error 'user-by-id "unexpected ~s" x)])))
 
+(provide/contract (user-by-name (string? . -> . user?)))
+(define (user-by-name name)
+  (let-prepare ([stmt "SELECT * FROM user WHERE name=?"])
+    (load-params stmt name)
+    (match (step* stmt)
+      [`(,(? vector? v)) (db->user v)]
+      [x (error 'user-by-id "unexpected ~s" x)])))
+
+
 (provide/contract (change-password (string? string? . -> . boolean?)))
 (define (change-password username password)
   (let-prepare ([stmt "UPDATE user SET password_hash=? WHERE name=?"])
@@ -194,6 +203,12 @@
 (define (solutions-by-user u asgn-name)
   (let-prepare ([stmt "SELECT id, user_id, asgn_name, submission, time, status, status_text FROM solution WHERE asgn_name=? AND user_id=?"])
     (load-params stmt asgn-name (user-id u))
+    (map db->solution (step* stmt))))
+
+(provide/contract (latest-ok-solution-by-user-id (integer? string? . -> . (listof solution?))))
+(define (latest-ok-solution-by-user-id user-id asgn-name)
+  (let-prepare ([stmt "SELECT id, user_id, asgn_name, submission, time, status, status_text FROM solution WHERE asgn_name=? AND user_id=? AND status=\"ok\" ORDER BY time DESC LIMIT 1"])
+    (load-params stmt asgn-name user-id)
     (map db->solution (step* stmt))))
 
 (provide/contract (new-test-suite (test-suite? . -> . any)))
